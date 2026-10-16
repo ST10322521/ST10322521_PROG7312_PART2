@@ -6,6 +6,10 @@ services:
     container_name: smartx-api
     ports:
       - "5017:8080"
+    environment:
+      - ConnectionStrings__SmartXDatabase=Data Source=/app/data/smartx.db
+    volumes:
+      - smartx-api-data:/app/data
     networks:
       - smartx-network
 
@@ -30,6 +34,9 @@ services:
       - api
     networks:
       - smartx-network
+
+volumes:
+  smartx-api-data:
 
 networks:
   smartx-network:
