@@ -480,3 +480,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Smart-X local database
+SmartX.Api/*.db
+SmartX.Api/*.db-shm
+SmartX.Api/*.db-wal
