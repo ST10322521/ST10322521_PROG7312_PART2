@@ -1,0 +1,33 @@
+# .NET build output
+**/bin/
+**/obj/
+
+# IDE/editor files
+.vscode/
+.vs/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# OS/editor metadata
+.DS_Store
+Thumbs.db
+
+# Local environment files
+**/.env
+**/.env.*
+!**/.env.example
+
+# Docker local state
+**/docker-data/
+**/docker-volumes/
+
+# Test/coverage output
+**/TestResults/
+**/coverage/
+
+# Documentation/build artifacts
+**/*.user
+**/*.suo

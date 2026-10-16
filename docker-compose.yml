@@ -1,0 +1,36 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: SmartX.Api/Dockerfile
+    container_name: smartx-api
+    ports:
+      - "5017:8080"
+    networks:
+      - smartx-network
+
+  client:
+    build:
+      context: .
+      dockerfile: SmartX.Client/Dockerfile
+    container_name: smartx-client
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    networks:
+      - smartx-network
+
+  simulator:
+    build:
+      context: .
+      dockerfile: SmartX.SensorSimulator/Dockerfile
+    container_name: smartx-simulator
+    depends_on:
+      - api
+    networks:
+      - smartx-network
+
+networks:
+  smartx-network:
+    driver: bridge
