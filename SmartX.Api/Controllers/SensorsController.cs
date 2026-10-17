@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartX.Api.Data;
 using SmartX.Shared.Models;
+using SmartX.Shared.DTOs;
 
 // https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.controllerbase.createdataction?view=aspnetcore-10.0
 // https://learn.microsoft.com/en-us/dotnet/api/system.data.entity.dbextensions.asnotracking?view=entity-framework-5.0.0
@@ -23,12 +24,24 @@ public class SensorsController : ControllerBase
     /// <summary>
     /// Creates a new sensor.
     /// </summary>
-    /// <param name="sensor"></param>
+    /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost]
-    public async Task<ActionResult<Sensor>> CreateSensor(Sensor sensor)
+    public async Task<ActionResult<Sensor>> CreateSensor(CreateSensorRequest request)
     {
-        sensor.Id = Guid.NewGuid();
+        var sensor = new Sensor
+        {
+            Id = Guid.NewGuid(),
+            DeviceId = request.DeviceId,
+            MacAddress = request.MacAddress,
+            Location = request.Location,
+            Category = request.Category,
+            TelemetryType = request.TelemetryType,
+            SamplingIntervalSeconds = request.SamplingIntervalSeconds,
+            NormalMin = request.NormalMin,
+            NormalMax = request.NormalMax,
+            IsActive = true
+        };
 
         _context.Sensors.Add(sensor);
         await _context.SaveChangesAsync();

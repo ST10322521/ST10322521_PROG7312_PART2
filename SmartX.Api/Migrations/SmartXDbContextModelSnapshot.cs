@@ -57,7 +57,7 @@ namespace SmartX.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Sensors");
+                    b.ToTable("Sensors", (string)null);
                 });
 #pragma warning restore 612, 618
         }
