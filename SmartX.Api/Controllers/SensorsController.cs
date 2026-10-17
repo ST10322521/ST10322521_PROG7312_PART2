@@ -1,102 +1,78 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SmartX.Api.Data;
 using SmartX.Shared.Models;
 using SmartX.Shared.DTOs;
-using SmartX.Shared.Validation;
+using SmartX.Api.Results;
+using SmartX.Api.Services.Interfaces;
 
 // https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.controllerbase.createdataction?view=aspnetcore-10.0
-// https://learn.microsoft.com/en-us/dotnet/api/system.data.entity.dbextensions.asnotracking?view=entity-framework-5.0.0
 
 namespace SmartX.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-
 public class SensorsController : ControllerBase
 {
-    private readonly SmartXDbContext _context;
+    private readonly ISensorService _sensorService;
 
-    public SensorsController(SmartXDbContext context)
+    public SensorsController(ISensorService sensorService)
     {
-        _context = context;
+        _sensorService = sensorService;
     }
-
     /// <summary>
-    /// Creates a new sensor.
+    /// Creates a new sensor based on the provided request data.
     /// </summary>
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost]
     public async Task<ActionResult<Sensor>> CreateSensor(CreateSensorRequest request)
     {
-        var validationErrors = SensorValidation.Validate(request);
-        if (validationErrors.Any())
+        // Validate the request
+        var result = await _sensorService.CreateAsync(request);
+        if (result.Status == ServiceStatus.ValidationFailure)
         {
-            return BadRequest(new { errors = validationErrors });
+            return BadRequest(new { errors = result.Errors });
+        }
+        if (result.Status == ServiceStatus.Conflict)
+        {
+            return Conflict(new { error = result.Error });
         }
 
-        var deviceIdExists = await _context.Sensors.AnyAsync(s => s.DeviceId == request.DeviceId);
-        if (deviceIdExists)
-        {
-            return Conflict(new { error = "A sensor with the same DeviceId already exists." });
-        }
-
-        var macAddressExists = await _context.Sensors.AnyAsync(s => s.MacAddress == request.MacAddress);
-        if (macAddressExists)
-        {
-            return Conflict(new { error = "A sensor with the same MacAddress already exists." });
-        }
-
-        var sensor = new Sensor
-        {
-            Id = Guid.NewGuid(),
-            DeviceId = request.DeviceId,
-            MacAddress = request.MacAddress,
-            Location = request.Location,
-            Category = request.Category,
-            TelemetryType = request.TelemetryType,
-            SamplingIntervalSeconds = request.SamplingIntervalSeconds,
-            NormalMin = request.NormalMin,
-            NormalMax = request.NormalMax,
-            IsActive = true
-        };
-
-        _context.Sensors.Add(sensor);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetSensor), new { id = sensor.Id }, sensor);
+        return CreatedAtAction(nameof(GetSensor), new { id = result.Data!.Id }, result.Data);
     }
-
     /// <summary>
-    /// Gets all sensors.
+    /// Retrieves all sensors from the database.
     /// </summary>
     /// <returns></returns>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Sensor>>> GetSensors()
     {
-        return await _context.Sensors.AsNoTracking().ToListAsync();
+        var sensors = await _sensorService.GetAllAsync();
+        return Ok(sensors);
     }
-
     /// <summary>
-    /// Gets a sensor by its unique identifier.
+    /// Retrieves a specific sensor by its unique identifier (ID).
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<Sensor>> GetSensor(Guid id)
     {
-        var sensor = await _context.Sensors.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
-
+        // Check if the sensor exists
+        var sensor = await _sensorService.GetByIdAsync(id);
         if (sensor is null)
         {
             return NotFound();
         }
 
-        return sensor;
+        return Ok(sensor);
     }
     /// <summary>
-    /// Updates an existing sensor by its unique identifier.
+    /// Updates an existing sensor based on the provided ID and request data.
+    /// If the sensor does not exist, a NotFound response is returned.
+    /// If the request data is invalid, a BadRequest response is returned.
+    /// If there is a conflict with existing sensors (e.g., duplicate DeviceId or MacAddress), a Conflict response is returned.
+    /// If the update is successful, an Ok response with the updated sensor data is returned.
+    /// If an unexpected error occurs, a 500 Internal Server Error response is returned.
     /// </summary>
     /// <param name="id"></param>
     /// <param name="request"></param>
@@ -104,60 +80,54 @@ public class SensorsController : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<Sensor>> UpdateSensor(Guid id, CreateSensorRequest request)
     {
-        var validationErrors = SensorValidation.Validate(request);
-        if (validationErrors.Any())
+        // Validate the request
+        var result = await _sensorService.UpdateAsync(id, request);
+        return result.Status switch
         {
-            return BadRequest(new { errors = validationErrors });
-        }
+            ServiceStatus.ValidationFailure => BadRequest(new { errors = result.Errors }),
 
-        var sensor = await _context.Sensors.FindAsync(id);
-        if (sensor is null)
-        {
-            return NotFound();
-        }
+            ServiceStatus.NotFound => NotFound(),
 
-        var deviceIdExists = await _context.Sensors.AnyAsync(s => s.DeviceId == request.DeviceId && s.Id != id);
-        if (deviceIdExists)
-        {
-            return Conflict(new { error = "A sensor with the same DeviceId already exists." });
-        }
+            ServiceStatus.Conflict => Conflict(new { error = result.Error }),
 
-        var macAddressExists = await _context.Sensors.AnyAsync(s => s.MacAddress == request.MacAddress && s.Id != id);
-        if (macAddressExists)
-        {
-            return Conflict(new { error = "A sensor with the same MacAddress already exists." });
-        }
+            ServiceStatus.Success => Ok(result.Data),
 
-        sensor.DeviceId = request.DeviceId;
-        sensor.MacAddress = request.MacAddress;
-        sensor.Location = request.Location;
-        sensor.Category = request.Category;
-        sensor.TelemetryType = request.TelemetryType;
-        sensor.SamplingIntervalSeconds = request.SamplingIntervalSeconds;
-        sensor.NormalMin = request.NormalMin;
-        sensor.NormalMax = request.NormalMax;
-
-        await _context.SaveChangesAsync();
-
-        return Ok(sensor);
+            _ => StatusCode(500)
+        };
     }
     /// <summary>
-    /// Deletes a sensor by its unique identifier.
+    /// Sets the active status of a sensor based on the provided ID and request data.
+    /// If the sensor does not exist, a NotFound response is returned.
+    /// If the update is successful, an Ok response with the updated sensor data is returned.
+    /// If an unexpected error occurs, a 500 Internal Server Error response is returned.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    [HttpPatch("{id:guid}/active")]
+    public async Task<ActionResult<Sensor>> SetSensorActive(Guid id, UpdateSensorActiveRequest request)
+    {
+        var result = await _sensorService.SetActiveAsync(id, request.IsActive);
+        return result.Status switch
+        {
+            ServiceStatus.NotFound => NotFound(),
+            ServiceStatus.Success => Ok(result.Data),
+            _ => StatusCode(500)
+        };
+    }
+    /// <summary>
+    /// Deletes a sensor based on the provided ID.
+    /// If the sensor does not exist, a NotFound response is returned.
+    /// If the deletion is successful, a NoContent response is returned.
+    /// If an unexpected error occurs, a 500 Internal Server Error response is returned.
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteSensor(Guid id)
     {
-        var sensor = await _context.Sensors.FindAsync(id);
-        if (sensor is null)
-        {
-            return NotFound();
-        }
+        var deleted = await _sensorService.DeleteAsync(id);
 
-        _context.Sensors.Remove(sensor);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        return deleted ? NoContent() : NotFound();
     }
 }

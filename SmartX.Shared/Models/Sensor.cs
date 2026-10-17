@@ -11,8 +11,8 @@ namespace SmartX.Shared.Models
         public required SensorCategory Category { get; set; }
         public required TelemetryType TelemetryType { get; set; }
         public int SamplingIntervalSeconds { get; set; }
-        public double NormalMin { get; set; }
-        public double NormalMax { get; set; }
+        public double NormalMin { get; set; } = 0;
+        public double NormalMax { get; set; } = 0;
         public bool IsActive { get; set; }
     }
 }

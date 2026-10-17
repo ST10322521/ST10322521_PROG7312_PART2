@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SmartX.Api.Data;
 using SmartX.Api.Services;
+using SmartX.Api.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 /// Scoped
 builder.Services.AddScoped<TelemetryService>();
+builder.Services.AddScoped<ITelemetryIngestionService, TelemetryIngestionService>();
+builder.Services.AddScoped<ISensorService, SensorService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
