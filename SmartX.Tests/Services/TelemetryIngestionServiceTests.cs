@@ -4,6 +4,9 @@ using SmartX.Api.Services;
 using SmartX.Shared.DTOs;
 using SmartX.Shared.Enums;
 using SmartX.Shared.Models;
+using Microsoft.AspNetCore.SignalR;
+using SmartX.Api.Hubs;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SmartX.Tests.Services;
 
@@ -16,6 +19,14 @@ public class TelemetryIngestionServiceTests
             .Options;
 
         return new SmartXDbContext(options);
+    }
+
+    private static IHubContext<SmartXHub> CreateHubContext()
+    {
+        var services = new ServiceCollection();
+        services.AddSignalR();
+        var serviceProvider = services.BuildServiceProvider();
+        return serviceProvider.GetRequiredService<IHubContext<SmartXHub>>();
     }
 
     [Fact]
@@ -41,7 +52,8 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService());
+            new TelemetryService(),
+            CreateHubContext());
 
         var request = new TelemetryRequest
         {
@@ -82,7 +94,8 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService());
+            new TelemetryService(),
+            CreateHubContext());
 
         var request = new TelemetryRequest
         {
@@ -123,7 +136,8 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService());
+            new TelemetryService(),
+            CreateHubContext());
 
         var request = new TelemetryRequest
         {
@@ -163,7 +177,8 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService());
+            new TelemetryService(),
+            CreateHubContext());
 
         var request = new TelemetryRequest
         {
@@ -187,7 +202,8 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService());
+            new TelemetryService(),
+            CreateHubContext());
 
         var request = new TelemetryRequest
         {

@@ -2,6 +2,11 @@ using SmartX.Shared.Models;
 
 public static class DeploymentValidation
 {
+    /// <summary>
+    /// Validates a DeploymentNode hierarchy, returning a list of validation error messages.
+    /// </summary>
+    /// <param name="root"></param>
+    /// <returns></returns>
     public static List<string> Validate(DeploymentNode root)
     {
         var errors = new List<string>();
@@ -14,7 +19,12 @@ public static class DeploymentValidation
 
         return errors;
     }
-
+    /// <summary>
+    /// Recursively validates a DeploymentNode and its children, collecting any validation errors.
+    /// </summary>
+    /// <param name="node"></param>
+    /// <param name="path"></param>
+    /// <param name="errors"></param>
     private static void ValidateNode(
         DeploymentNode node,
         string path,

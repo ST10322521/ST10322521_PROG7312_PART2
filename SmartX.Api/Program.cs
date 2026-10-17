@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartX.Api.Data;
+using SmartX.Api.Hubs;
 using SmartX.Api.Services;
 using SmartX.Api.Services.Interfaces;
 
@@ -12,6 +13,7 @@ builder.Services.AddDbContext<SmartXDbContext>(options =>
     options.UseSqlite(connectionString));
 
 // Add services to the container.
+builder.Services.AddSignalR();
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
@@ -42,5 +44,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapControllers();
+app.MapHub<SmartXHub>("/smartxHub");
 
 app.Run();

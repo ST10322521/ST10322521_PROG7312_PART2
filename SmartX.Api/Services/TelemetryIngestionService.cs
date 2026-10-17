@@ -1,7 +1,9 @@
 
 using System.Globalization;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SmartX.Api.Data;
+using SmartX.Api.Hubs;
 using SmartX.Api.Services.Interfaces;
 using SmartX.Shared.DTOs;
 using SmartX.Shared.Enums;
@@ -13,11 +15,13 @@ public class TelemetryIngestionService : ITelemetryIngestionService
 {
     private readonly SmartXDbContext _context;
     private readonly TelemetryService _telemetryService;
+    private readonly IHubContext<SmartXHub> _hubContext;
 
-    public TelemetryIngestionService(SmartXDbContext context, TelemetryService telemetryService)
+    public TelemetryIngestionService(SmartXDbContext context, TelemetryService telemetryService, IHubContext<SmartXHub> hubContext)
     {
         _context = context;
         _telemetryService = telemetryService;
+        _hubContext = hubContext;
     }
     /// <summary>
     /// Receives telemetry data from a sensor and processes it based on the sensor's telemetry type.
@@ -105,12 +109,16 @@ public class TelemetryIngestionService : ITelemetryIngestionService
                             break;
                     }
 
-                    return new TelemetryResponse(
+                    var response = new TelemetryResponse(
                         request.DeviceId,
                         timestamp,
                         request.TelemetryType,
                         numericValue,
                         status);
+
+                    await _hubContext.Clients.All.SendAsync("TelemetryReceived", response);
+
+                    return response;
                 }
 
             case TelemetryType.RelayState:
@@ -132,12 +140,16 @@ public class TelemetryIngestionService : ITelemetryIngestionService
                             Value = booleanValue
                         });
 
-                    return new TelemetryResponse(
+                    var response = new TelemetryResponse(
                         request.DeviceId,
                         timestamp,
                         request.TelemetryType,
                         booleanValue,
                         status);
+
+                    await _hubContext.Clients.All.SendAsync("TelemetryReceived", response);
+
+                    return response;
                 }
 
             default:
