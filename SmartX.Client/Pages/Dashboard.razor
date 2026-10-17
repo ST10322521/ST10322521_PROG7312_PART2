@@ -1,0 +1,102 @@
+@page "/dashboard"
+@implements IDisposable
+@inject SmartX.Client.Services.SignalRService SignalRService
+@using MudBlazor
+
+<PageTitle>Smart-X Dashboard</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        Smart-X Dashboard
+    </MudText>
+
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
+        Live sensor telemetry
+    </MudText>
+
+    @if (_latestTelemetry is null)
+    {
+        <MudAlert Severity="Severity.Info">
+            Waiting for telemetry...
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+
+                        <MudStack Spacing="2">
+
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.h6">
+                                        @_latestTelemetry.DeviceId
+                                    </MudText>
+
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        @_latestTelemetry.TelemetryType
+                                    </MudText>
+                                </MudStack>
+
+                                <MudChip T="string" Color="@GetStatusColor(_latestTelemetry.Status)" Size="Size.Small">
+                                    @_latestTelemetry.Status
+                                </MudChip>
+
+                            </MudStack>
+
+                            <MudText Typo="Typo.h2">
+                                @_latestTelemetry.Value
+                            </MudText>
+
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @_latestTelemetry.Timestamp.ToLocalTime()
+                                .ToString("yyyy-MM-dd HH:mm:ss")
+                            </MudText>
+
+                        </MudStack>
+
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+
+</MudContainer>
+
+@code {
+    private SmartX.Shared.DTOs.TelemetryResponse? _latestTelemetry;
+
+    protected override void OnInitialized()
+    {
+        SignalRService.TelemetryReceived += OnTelemetryReceived;
+    }
+
+    private void OnTelemetryReceived(
+        SmartX.Shared.DTOs.TelemetryResponse telemetry)
+    {
+        _latestTelemetry = telemetry;
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private static Color GetStatusColor(
+        SmartX.Shared.Enums.TelemetryStatus status)
+    {
+        return status switch
+        {
+            SmartX.Shared.Enums.TelemetryStatus.Normal => Color.Success,
+            SmartX.Shared.Enums.TelemetryStatus.Warning => Color.Warning,
+            SmartX.Shared.Enums.TelemetryStatus.Critical => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    public void Dispose()
+    {
+        SignalRService.TelemetryReceived -= OnTelemetryReceived;
+    }
+}

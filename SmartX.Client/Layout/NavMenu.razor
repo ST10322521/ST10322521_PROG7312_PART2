@@ -1,39 +1,66 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">SmartX.Client</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
+﻿@using MudBlazor
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
+<MudNavMenu>
 
-@code {
-    private bool collapseNavMenu = true;
+    <MudText Typo="Typo.overline" Class="px-4 mt-2 mb-1">
+        Overview
+    </MudText>
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+        Home
+    </MudNavLink>
 
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
-}
+    <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard">
+        Dashboard
+    </MudNavLink>
+
+
+    <MudText Typo="Typo.overline" Class="px-4 mt-4 mb-1">
+        Devices
+    </MudText>
+
+    <MudNavLink Href="/sensors" Icon="@Icons.Material.Filled.Sensors">
+        Sensors
+    </MudNavLink>
+
+
+    <MudText Typo="Typo.overline" Class="px-4 mt-4 mb-1">
+        Telemetry
+    </MudText>
+
+    <MudNavLink Href="/telemetry" Icon="@Icons.Material.Filled.Timeline">
+        Live Data
+    </MudNavLink>
+
+    <MudNavLink Href="/history" Icon="@Icons.Material.Filled.History">
+        History
+    </MudNavLink>
+
+
+    <MudText Typo="Typo.overline" Class="px-4 mt-4 mb-1">
+        Commands
+    </MudText>
+
+    <MudNavLink Href="/commands" Icon="@Icons.Material.Filled.Tune">
+        Controls
+    </MudNavLink>
+
+
+    <MudText Typo="Typo.overline" Class="px-4 mt-4 mb-1">
+        Intelligence
+    </MudText>
+
+    <MudNavLink Href="/insights" Icon="@Icons.Material.Filled.AutoAwesome">
+        Suggested Actions
+    </MudNavLink>
+
+
+    <MudText Typo="Typo.overline" Class="px-4 mt-4 mb-1">
+        Network
+    </MudText>
+
+    <MudNavLink Href="/topology" Icon="@Icons.Material.Filled.Hub" Disabled="true">
+        Network Topology
+    </MudNavLink>
+
+</MudNavMenu>
