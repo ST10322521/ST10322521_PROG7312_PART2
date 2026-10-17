@@ -14,9 +14,21 @@ builder.Services.AddDbContext<SmartXDbContext>(options =>
 
 // Add services to the container.
 builder.Services.AddSignalR();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("SmartXClient", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5269")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    options.JsonSerializerOptions.Converters.Add(
+        new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 /// Scoped
 builder.Services.AddScoped<TelemetryService>();
@@ -42,6 +54,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("SmartXClient");
 
 app.MapControllers();
 app.MapHub<SmartXHub>("/smartxHub");
