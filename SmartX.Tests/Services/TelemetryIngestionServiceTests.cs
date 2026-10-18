@@ -24,6 +24,7 @@ public class TelemetryIngestionServiceTests
     private static IHubContext<SmartXHub> CreateHubContext()
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSignalR();
         var serviceProvider = services.BuildServiceProvider();
         return serviceProvider.GetRequiredService<IHubContext<SmartXHub>>();

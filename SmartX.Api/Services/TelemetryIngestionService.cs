@@ -16,6 +16,7 @@ public class TelemetryIngestionService : ITelemetryIngestionService
     private readonly SmartXDbContext _context;
     private readonly TelemetryService _telemetryService;
     private readonly IHubContext<SmartXHub> _hubContext;
+    private readonly Dictionary<string, SensorReading> _previousNumericReadings = new();
 
     public TelemetryIngestionService(SmartXDbContext context, TelemetryService telemetryService, IHubContext<SmartXHub> hubContext)
     {
@@ -24,11 +25,7 @@ public class TelemetryIngestionService : ITelemetryIngestionService
         _hubContext = hubContext;
     }
     /// <summary>
-    /// Receives telemetry data from a sensor and processes it based on the sensor's telemetry type.
-    /// If the sensor does not exist, returns null.
-    /// If the telemetry type does not match the registered sensor's telemetry type, throws an InvalidOperationException.
-    /// If the telemetry value is not of the expected type, throws an ArgumentException.
-    /// Returns a TelemetryResponse containing the processed telemetry data and its status.
+    /// Receives telemetry data asynchronously. The method takes a TelemetryRequest object as input, which contains the device ID, timestamp, telemetry type, and value. It first checks if the sensor associated with the device ID exists in the database. If the sensor is found, it validates that the telemetry type matches the registered sensor's telemetry type. Depending on the telemetry type, it processes numeric or boolean values accordingly, calculates any delta from previous readings, and constructs a TelemetryResponse object. The response is then sent to all connected clients via SignalR. If any validation fails or if the sensor does not exist, appropriate exceptions are thrown or null is returned.  
     /// </summary>
     /// <param name="request"></param>
     /// <returns></returns>
@@ -109,12 +106,25 @@ public class TelemetryIngestionService : ITelemetryIngestionService
                             break;
                     }
 
+                    var currentReading = new SensorReading(request.DeviceId, timestamp, request.TelemetryType, numericValue);
+
+                    double? delta = null;
+
+                    if (_previousNumericReadings.TryGetValue(request.DeviceId, out var previousReading))
+                    {
+                        var deltaReading = currentReading - previousReading;
+                        delta = deltaReading.Value;
+                    }
+
+                    _previousNumericReadings[request.DeviceId] = currentReading;
+
                     var response = new TelemetryResponse(
                         request.DeviceId,
                         timestamp,
                         request.TelemetryType,
                         numericValue,
-                        status);
+                        status,
+                        delta);
 
                     await _hubContext.Clients.All.SendAsync("TelemetryReceived", response);
 

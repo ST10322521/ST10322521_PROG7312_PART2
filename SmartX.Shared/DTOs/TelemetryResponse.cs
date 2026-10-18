@@ -7,4 +7,5 @@ public sealed record TelemetryResponse(
     DateTime Timestamp,
     TelemetryType TelemetryType,
     object Value,
-    TelemetryStatus Status);
+    TelemetryStatus Status,
+    double? Delta = null);
