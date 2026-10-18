@@ -34,6 +34,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddScoped<TelemetryService>();
 builder.Services.AddScoped<ITelemetryIngestionService, TelemetryIngestionService>();
 builder.Services.AddScoped<ISensorService, SensorService>();
+builder.Services.AddScoped<ISensorAttachmentService, SensorAttachmentService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
