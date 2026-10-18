@@ -15,14 +15,14 @@ public class TelemetryIngestionService : ITelemetryIngestionService
 {
     private readonly SmartXDbContext _context;
     private readonly TelemetryService _telemetryService;
-    private readonly IHubContext<SmartXHub> _hubContext;
     private readonly Dictionary<string, SensorReading> _previousNumericReadings = new();
 
-    public TelemetryIngestionService(SmartXDbContext context, TelemetryService telemetryService, IHubContext<SmartXHub> hubContext)
+    public TelemetryIngestionService(
+    SmartXDbContext context,
+    TelemetryService telemetryService)
     {
         _context = context;
         _telemetryService = telemetryService;
-        _hubContext = hubContext;
     }
     /// <summary>
     /// Receives telemetry data asynchronously. The method takes a TelemetryRequest object as input, which contains the device ID, timestamp, telemetry type, and value. It first checks if the sensor associated with the device ID exists in the database. If the sensor is found, it validates that the telemetry type matches the registered sensor's telemetry type. Depending on the telemetry type, it processes numeric or boolean values accordingly, calculates any delta from previous readings, and constructs a TelemetryResponse object. The response is then sent to all connected clients via SignalR. If any validation fails or if the sensor does not exist, appropriate exceptions are thrown or null is returned.  
@@ -126,8 +126,6 @@ public class TelemetryIngestionService : ITelemetryIngestionService
                         status,
                         delta);
 
-                    await _hubContext.Clients.All.SendAsync("TelemetryReceived", response);
-
                     return response;
                 }
 
@@ -156,8 +154,6 @@ public class TelemetryIngestionService : ITelemetryIngestionService
                         request.TelemetryType,
                         booleanValue,
                         status);
-
-                    await _hubContext.Clients.All.SendAsync("TelemetryReceived", response);
 
                     return response;
                 }

@@ -33,6 +33,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 /// Scoped
 builder.Services.AddScoped<TelemetryService>();
 builder.Services.AddScoped<ITelemetryIngestionService, TelemetryIngestionService>();
+builder.Services.AddSingleton<TelemetryQueueService>();
+builder.Services.AddHostedService<TelemetryQueueProcessor>();
 builder.Services.AddScoped<ISensorService, SensorService>();
 builder.Services.AddScoped<ISensorAttachmentService, SensorAttachmentService>();
 

@@ -1,7 +1,5 @@
-
 using Microsoft.AspNetCore.Mvc;
-using SmartX.Api.Services.Interfaces;
-using SmartX.Shared.DTOs;
+using SmartX.Api.Services;
 
 namespace SmartX.Api.Controllers;
 
@@ -9,40 +7,28 @@ namespace SmartX.Api.Controllers;
 [Route("api/[controller]")]
 public class TelemetryController : ControllerBase
 {
-    private readonly ITelemetryIngestionService _ingestionService;
+    private readonly TelemetryQueueService _telemetryQueue;
 
     public TelemetryController(
-        ITelemetryIngestionService ingestionService)
+        TelemetryQueueService telemetryQueue)
     {
-        _ingestionService = ingestionService;
+        _telemetryQueue = telemetryQueue;
     }
-
+    /// <summary>
+    /// Receives telemetry data from a sensor and enqueues it for processing. The method takes a TelemetryRequest object as input, which contains the device ID, timestamp, telemetry type, and value. It enqueues the request into the TelemetryQueueService for asynchronous processing by the background service. The method returns an HTTP 202 Accepted response with a message indicating that the telemetry has been queued for processing, along with the current length of the queue.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
     [HttpPost]
-    public async Task<IActionResult> ReceiveTelemetry(
-        TelemetryRequest request)
+    public IActionResult ReceiveTelemetry(
+        SmartX.Shared.DTOs.TelemetryRequest request)
     {
-        try
-        {
-            var response =
-                await _ingestionService.ReceiveTelemetryAsync(request);
+        _telemetryQueue.Enqueue(request);
 
-            if (response is null)
-            {
-                return NotFound(new
-                {
-                    error = "No registered sensor found for the provided DeviceId."
-                });
-            }
-
-            return Ok(response);
-        }
-        catch (ArgumentException ex)
+        return Accepted(new
         {
-            return BadRequest(new { error = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
+            message = "Telemetry queued for processing.",
+            queueLength = _telemetryQueue.Count
+        });
     }
 }

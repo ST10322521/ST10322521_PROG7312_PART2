@@ -53,8 +53,7 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService(),
-            CreateHubContext());
+            new TelemetryService());
 
         var request = new TelemetryRequest
         {
@@ -95,8 +94,7 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService(),
-            CreateHubContext());
+            new TelemetryService());
 
         var request = new TelemetryRequest
         {
@@ -137,8 +135,7 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService(),
-            CreateHubContext());
+            new TelemetryService());
 
         var request = new TelemetryRequest
         {
@@ -178,8 +175,7 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService(),
-            CreateHubContext());
+            new TelemetryService());
 
         var request = new TelemetryRequest
         {
@@ -203,8 +199,7 @@ public class TelemetryIngestionServiceTests
 
         var service = new TelemetryIngestionService(
             context,
-            new TelemetryService(),
-            CreateHubContext());
+            new TelemetryService());
 
         var request = new TelemetryRequest
         {
