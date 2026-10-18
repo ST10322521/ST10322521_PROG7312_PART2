@@ -14,6 +14,7 @@ builder.Services.AddMudServices();
 /// Scoped
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<SignalRService>();
+builder.Services.AddScoped<SensorService>();
 
 var app = builder.Build();
 

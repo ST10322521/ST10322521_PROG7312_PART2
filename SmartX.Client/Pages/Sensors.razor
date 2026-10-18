@@ -1,0 +1,133 @@
+@page "/sensors"
+
+@using SmartX.Shared.DTOs
+@using SmartX.Shared.Enums
+@using SmartX.Shared.Models
+
+<PageTitle>Sensors</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Sensor Management</MudText>
+
+<MudPaper Class="pa-4">
+
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h6">Registered Sensors (@sensors.Count)</MudText>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreate">
+            Add Sensor
+        </MudButton>
+    </div>
+
+    @if (loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <MudAlert Severity="Severity.Error">@error</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="sensors" Hover="true" Dense="true" Striped="true">
+            <HeaderContent>
+                <MudTh>Device</MudTh>
+                <MudTh>Category</MudTh>
+                <MudTh>Telemetry</MudTh>
+                <MudTh>Location</MudTh>
+                <MudTh>Interval</MudTh>
+                <MudTh>Range</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+                <MudTd DataLabel="Device">
+                    <MudText Typo="Typo.body2">@context.DeviceId</MudText>
+                    <MudText Typo="Typo.caption">@context.MacAddress</MudText>
+                </MudTd>
+
+                <MudTd DataLabel="Category">@context.Category</MudTd>
+                <MudTd DataLabel="Telemetry">@context.TelemetryType</MudTd>
+                <MudTd DataLabel="Location">@context.Location</MudTd>
+                <MudTd DataLabel="Interval">@context.SamplingIntervalSeconds s</MudTd>
+                <MudTd DataLabel="Range">@context.NormalMin - @context.NormalMax</MudTd>
+
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
+                        @(context.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                </MudTd>
+
+                <MudTd DataLabel="Actions">
+                    <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Edit"
+                               OnClick="@(() => OpenEdit(context))">
+                        Edit
+                    </MudButton>
+
+                    <MudButton Size="Size.Small" Variant="Variant.Text"
+                               Color="@(context.IsActive ? Color.Warning : Color.Success)"
+                               StartIcon="@(context.IsActive ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                               OnClick="@(() => ToggleActive(context))">
+                        @(context.IsActive ? "Disable" : "Enable")
+                    </MudButton>
+
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteSensor(context))">
+                        Delete
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+
+            <NoRecordsContent>
+                <MudText>No sensors registered.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    }
+
+</MudPaper>
+
+@if (showForm)
+{
+    <MudDialog @bind-Visible="showForm">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-4">
+                @(editing ? "Edit Sensor" : "Add Sensor")
+            </MudText>
+
+            <MudTextField @bind-Value="form.DeviceId" Label="Device ID" Required="true" Class="mb-3" />
+
+            <MudTextField @bind-Value="form.MacAddress" Label="MAC Address" Required="true" Class="mb-3" />
+
+            <MudTextField @bind-Value="form.Location" Label="Location" Required="true" Class="mb-3" />
+
+            <MudSelect T="SensorCategory" @bind-Value="form.Category" Label="Category" Class="mb-3">
+                @foreach (var category in Enum.GetValues<SensorCategory>())
+                {
+                    <MudSelectItem Value="category">@category</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="TelemetryType" @bind-Value="form.TelemetryType" Label="Telemetry Type" Class="mb-3">
+                @foreach (var type in Enum.GetValues<TelemetryType>())
+                {
+                    <MudSelectItem Value="type">@type</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudNumericField T="int" @bind-Value="form.SamplingIntervalSeconds" Label="Sampling Interval (seconds)" Min="1"
+                             Class="mb-3" />
+
+            <MudNumericField T="double" @bind-Value="form.NormalMin" Label="Normal Minimum" Class="mb-3" />
+
+            <MudNumericField T="double" @bind-Value="form.NormalMax" Label="Normal Maximum" Class="mb-3" />
+        </DialogContent>
+
+        <DialogActions>
+            <MudButton OnClick="CloseForm">Cancel</MudButton>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveSensor">
+                Save
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
