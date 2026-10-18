@@ -1,102 +1,132 @@
-@page "/dashboard"
-@implements IDisposable
-@inject SmartX.Client.Services.SignalRService SignalRService
-@using MudBlazor
+@page "/"
+
+@using SmartX.Shared.DTOs
+@using SmartX.Shared.Enums
 
 <PageTitle>Smart-X Dashboard</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+<MudText Typo="Typo.h4" Class="mb-4">Smart-X Live Dashboard</MudText>
 
-    <MudText Typo="Typo.h4" GutterBottom="true">
-        Smart-X Dashboard
-    </MudText>
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">
+        @error
+    </MudAlert>
+}
 
-    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
-        Live sensor telemetry
-    </MudText>
+<div class="d-flex flex-wrap gap-4 mb-4">
 
-    @if (_latestTelemetry is null)
+    <MudPaper Class="pa-4" Style="min-width:180px;">
+        <MudText Typo="Typo.caption">Registered Sensors</MudText>
+        <MudText Typo="Typo.h4">@sensors.Count</MudText>
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Style="min-width:180px;">
+        <MudText Typo="Typo.caption">Active Sensors</MudText>
+        <MudText Typo="Typo.h4">@sensors.Count(x => x.IsActive)</MudText>
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Style="min-width:180px;">
+        <MudText Typo="Typo.caption">Live Readings</MudText>
+        <MudText Typo="Typo.h4">@latestTelemetry.Count</MudText>
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Style="min-width:180px;">
+        <MudText Typo="Typo.caption">Anomalies</MudText>
+        <MudText Typo="Typo.h4">@anomalyCount</MudText>
+    </MudPaper>
+
+</div>
+
+<MudPaper Class="pa-4 mb-4">
+
+    <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.h6">Live Telemetry</MudText>
+
+        <MudChip T="string"
+                 Size="Size.Small"
+                 Color="@(signalRConnected ? Color.Success : Color.Error)">
+            @(signalRConnected ? "SignalR Connected" : "SignalR Disconnected")
+        </MudChip>
+    </div>
+
+    @if (latestTelemetry.Count == 0)
     {
-        <MudAlert Severity="Severity.Info">
-            Waiting for telemetry...
-        </MudAlert>
+        <MudText Typo="Typo.body2">
+            Waiting for live telemetry...
+        </MudText>
     }
     else
     {
-        <MudGrid>
-            <MudItem xs="12" sm="6" md="4">
-                <MudCard Elevation="2">
-                    <MudCardContent>
+        <MudTable Items="latestTelemetry.Values.OrderBy(x => x.DeviceId)"
+                  Hover="true"
+                  Dense="true"
+                  Striped="true">
 
-                        <MudStack Spacing="2">
+            <HeaderContent>
+                <MudTh>Device</MudTh>
+                <MudTh>Telemetry</MudTh>
+                <MudTh>Value</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Timestamp</MudTh>
+            </HeaderContent>
 
-                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+            <RowTemplate>
+                <MudTd DataLabel="Device">
+                    @context.DeviceId
+                </MudTd>
 
-                                <MudStack Spacing="0">
-                                    <MudText Typo="Typo.h6">
-                                        @_latestTelemetry.DeviceId
-                                    </MudText>
+                <MudTd DataLabel="Telemetry">
+                    @context.TelemetryType
+                </MudTd>
 
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                        @_latestTelemetry.TelemetryType
-                                    </MudText>
-                                </MudStack>
+                <MudTd DataLabel="Value">
+                    <MudText Typo="Typo.body2">
+                        @context.Value
+                    </MudText>
+                </MudTd>
 
-                                <MudChip T="string" Color="@GetStatusColor(_latestTelemetry.Status)" Size="Size.Small">
-                                    @_latestTelemetry.Status
-                                </MudChip>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="@GetStatusColor(context.Status)">
+                        @context.Status
+                    </MudChip>
+                </MudTd>
 
-                            </MudStack>
+                <MudTd DataLabel="Timestamp">
+                    @context.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                </MudTd>
+            </RowTemplate>
 
-                            <MudText Typo="Typo.h2">
-                                @_latestTelemetry.Value
-                            </MudText>
-
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @_latestTelemetry.Timestamp.ToLocalTime()
-                                .ToString("yyyy-MM-dd HH:mm:ss")
-                            </MudText>
-
-                        </MudStack>
-
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        </MudGrid>
+        </MudTable>
     }
 
-</MudContainer>
+</MudPaper>
 
-@code {
-    private SmartX.Shared.DTOs.TelemetryResponse? _latestTelemetry;
+<MudPaper Class="pa-4">
 
-    protected override void OnInitialized()
+    <MudText Typo="Typo.h6" Class="mb-3">
+        Recent Anomalies
+    </MudText>
+
+    @if (recentAnomalies.Count == 0)
     {
-        SignalRService.TelemetryReceived += OnTelemetryReceived;
+        <MudText Typo="Typo.body2">
+            No anomalies detected yet.
+        </MudText>
     }
-
-    private void OnTelemetryReceived(
-        SmartX.Shared.DTOs.TelemetryResponse telemetry)
+    else
     {
-        _latestTelemetry = telemetry;
-
-        InvokeAsync(StateHasChanged);
-    }
-
-    private static Color GetStatusColor(
-        SmartX.Shared.Enums.TelemetryStatus status)
-    {
-        return status switch
+        @foreach (var telemetry in recentAnomalies)
         {
-            SmartX.Shared.Enums.TelemetryStatus.Normal => Color.Success,
-            SmartX.Shared.Enums.TelemetryStatus.Warning => Color.Warning,
-            SmartX.Shared.Enums.TelemetryStatus.Critical => Color.Error,
-            _ => Color.Default
-        };
+            <MudAlert Severity="Severity.Warning" Class="mb-2">
+                <strong>@telemetry.DeviceId</strong>
+                — @telemetry.TelemetryType:
+                @telemetry.Value
+                (@telemetry.Status)
+            </MudAlert>
+        }
     }
 
-    public void Dispose()
-    {
-        SignalRService.TelemetryReceived -= OnTelemetryReceived;
-    }
-}
+</MudPaper>

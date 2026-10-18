@@ -30,6 +30,7 @@
     else
     {
         <MudTable Items="sensors" Hover="true" Dense="true" Striped="true">
+
             <HeaderContent>
                 <MudTh>Device</MudTh>
                 <MudTh>Category</MudTh>
@@ -60,6 +61,12 @@
                 </MudTd>
 
                 <MudTd DataLabel="Actions">
+
+                    <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.AttachFile"
+                               OnClick="@(() => OpenAttachments(context))">
+                        Attachments
+                    </MudButton>
+
                     <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Edit"
                                OnClick="@(() => OpenEdit(context))">
                         Edit
@@ -76,21 +83,36 @@
                                StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteSensor(context))">
                         Delete
                     </MudButton>
+
                 </MudTd>
             </RowTemplate>
 
             <NoRecordsContent>
                 <MudText>No sensors registered.</MudText>
             </NoRecordsContent>
+
         </MudTable>
     }
 
 </MudPaper>
 
+
+@* ========================= SENSOR FORM ========================= *@
+
 @if (showForm)
 {
-    <MudDialog @bind-Visible="showForm">
-        <DialogContent>
+    <div style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 1300;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;">
+
+        <MudPaper Elevation="8" Class="pa-6" Style="width:100%; max-width:600px; max-height:90vh; overflow-y:auto;">
+
             <MudText Typo="Typo.h6" Class="mb-4">
                 @(editing ? "Edit Sensor" : "Add Sensor")
             </MudText>
@@ -102,17 +124,25 @@
             <MudTextField @bind-Value="form.Location" Label="Location" Required="true" Class="mb-3" />
 
             <MudSelect T="SensorCategory" @bind-Value="form.Category" Label="Category" Class="mb-3">
+
                 @foreach (var category in Enum.GetValues<SensorCategory>())
                 {
-                    <MudSelectItem Value="category">@category</MudSelectItem>
+                    <MudSelectItem Value="category">
+                        @category
+                    </MudSelectItem>
                 }
+
             </MudSelect>
 
             <MudSelect T="TelemetryType" @bind-Value="form.TelemetryType" Label="Telemetry Type" Class="mb-3">
+
                 @foreach (var type in Enum.GetValues<TelemetryType>())
                 {
-                    <MudSelectItem Value="type">@type</MudSelectItem>
+                    <MudSelectItem Value="type">
+                        @type
+                    </MudSelectItem>
                 }
+
             </MudSelect>
 
             <MudNumericField T="int" @bind-Value="form.SamplingIntervalSeconds" Label="Sampling Interval (seconds)" Min="1"
@@ -121,13 +151,154 @@
             <MudNumericField T="double" @bind-Value="form.NormalMin" Label="Normal Minimum" Class="mb-3" />
 
             <MudNumericField T="double" @bind-Value="form.NormalMax" Label="Normal Maximum" Class="mb-3" />
-        </DialogContent>
 
-        <DialogActions>
-            <MudButton OnClick="CloseForm">Cancel</MudButton>
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveSensor">
-                Save
-            </MudButton>
-        </DialogActions>
-    </MudDialog>
+            @if (!string.IsNullOrWhiteSpace(error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-3">
+                    @error
+                </MudAlert>
+            }
+
+            <div class="d-flex justify-end gap-2 mt-5">
+
+                <MudButton Variant="Variant.Text" OnClick="CloseForm">
+                    Cancel
+                </MudButton>
+
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveSensor">
+                    Save
+                </MudButton>
+
+            </div>
+
+        </MudPaper>
+
+    </div>
+}
+
+
+@* ========================= ATTACHMENTS ========================= *@
+
+@if (showAttachments && selectedSensor is not null)
+{
+    <div style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 1300;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;">
+
+        <MudPaper Elevation="8" Class="pa-6" Style="width:100%; max-width:800px; max-height:90vh; overflow-y:auto;">
+
+            <MudText Typo="Typo.h6" Class="mb-2">
+                Attachments — @selectedSensor.DeviceId
+            </MudText>
+
+            <MudText Typo="Typo.caption" Class="mb-4">
+                Configuration files, deployment photographs and hardware logs.
+            </MudText>
+
+            @if (!string.IsNullOrWhiteSpace(error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">
+                    @error
+                </MudAlert>
+            }
+
+            <MudPaper Outlined="true" Class="pa-4 mb-4">
+
+                <MudText Typo="Typo.subtitle2" Class="mb-3">
+                    Upload Attachment
+                </MudText>
+
+                <MudSelect T="SensorAttachmentType" @bind-Value="selectedAttachmentType" Label="Attachment Type"
+                           Class="mb-3">
+
+                    @foreach (var type in Enum.GetValues<SensorAttachmentType>())
+                    {
+                        <MudSelectItem Value="type">
+                            @type
+                        </MudSelectItem>
+                    }
+
+                </MudSelect>
+
+                <InputFile OnChange="UploadAttachment" accept=".json,.xml,.yaml,.yml,.txt,.jpg,.jpeg,.png,.log,.csv" />
+
+                @if (uploading)
+                {
+                    <MudProgressLinear Indeterminate="true" Class="mt-3" />
+                }
+
+            </MudPaper>
+
+            <MudText Typo="Typo.subtitle2" Class="mb-2">
+                Stored Attachments (@attachments.Count)
+            </MudText>
+
+            @if (attachments.Count == 0)
+            {
+                <MudText Typo="Typo.body2">
+                    No attachments stored for this sensor.
+                </MudText>
+            }
+            else
+            {
+                @foreach (var attachment in attachments)
+                {
+                    <MudPaper Outlined="true" Class="pa-3 mb-2">
+
+                        <div class="d-flex justify-space-between align-center">
+
+                            <div>
+                                <MudText Typo="Typo.body1">
+                                    @attachment.OriginalFileName
+                                </MudText>
+
+                                <MudText Typo="Typo.caption">
+                                    @attachment.AttachmentType
+                                    · @(Math.Round(attachment.FileSize / 1024.0, 1)) KB
+                                </MudText>
+                            </div>
+
+                            <div>
+
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Href="@GetDownloadUrl(attachment)"
+                                           Target="_blank" StartIcon="@Icons.Material.Filled.Download">
+                                    Download
+                                </MudButton>
+
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error"
+                                           StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteAttachment(attachment))">
+                                    Delete
+                                </MudButton>
+
+                            </div>
+
+                        </div>
+
+                        @if (IsImage(attachment))
+                        {
+                            <MudImage Src="@GetDownloadUrl(attachment)" Alt="@attachment.OriginalFileName" Fluid="true" Class="mt-3"
+                                      Style="max-height:300px; object-fit:contain;" />
+                        }
+
+                    </MudPaper>
+                }
+            }
+
+            <div class="d-flex justify-end mt-5">
+
+                <MudButton Variant="Variant.Text" OnClick="CloseAttachments">
+                    Close
+                </MudButton>
+
+            </div>
+
+        </MudPaper>
+
+    </div>
 }
