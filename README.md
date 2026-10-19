@@ -11,6 +11,9 @@ This README documents the implemented functionality for:
 
 The project intentionally does **not** implement **Network Topology and Mesh Routing**, as that functionality is reserved for Part 3 / the final PoE scope.
 
+## Demonstration Video
+YouTube: https://youtu.be/OtAjBqLiV2E
+
 ---
 
 # 1. Solution Overview
