@@ -133,6 +133,15 @@ public class TelemetryIngestionService : ITelemetryIngestionService
                         status,
                         delta);
 
+                    if (status == TelemetryStatus.Critical)
+                    {
+                        _sensorRegistry.AddErrorState(request.DeviceId, status.ToString());
+                    }
+                    else
+                    {
+                        _sensorRegistry?.RemoveErrorState(request.DeviceId, status.ToString());
+                    }
+
                     return response;
                 }
 

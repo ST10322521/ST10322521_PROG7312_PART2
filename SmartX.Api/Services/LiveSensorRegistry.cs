@@ -13,6 +13,7 @@ public sealed class LiveSensorRegistry
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly Dictionary<string, Sensor> _devicesByDeviceId = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Sensor> _devicesByMac = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _activeErrorStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
 
     public LiveSensorRegistry(IServiceScopeFactory scopeFactory)
@@ -54,6 +55,43 @@ public sealed class LiveSensorRegistry
         lock (_lock)
         {
             return _devicesByMac.TryGetValue(mac, out sensor);
+        }
+    }
+    /// <summary>
+    /// Adds an error state for a specific device to the registry. The method uses a lock to ensure thread safety while modifying the internal HashSet that tracks active error states. The error state is represented as a string in the format "deviceId:errorState". If the error state is successfully added to the HashSet, the method returns true; otherwise, it returns false if the error state already exists.
+    /// </summary>
+    /// <param name="deviceId"></param>
+    /// <param name="errorState"></param>
+    /// <returns></returns>
+    public bool AddErrorState(string deviceId, string errorState)
+    {
+        lock (_lock)
+        {
+            return _activeErrorStates.Add($"{deviceId}:{errorState}");
+        }
+    }
+    /// <summary>
+    /// Removes an error state for a specific device from the registry. The method uses a lock to ensure thread safety while modifying the internal HashSet that tracks active error states. The error state is represented as a string in the format "deviceId:errorState". If the error state is successfully removed from the HashSet, the method returns true; otherwise, it returns false if the error state does not exist.
+    /// </summary>
+    /// <param name="deviceId"></param>
+    /// <param name="errorState"></param>
+    /// <returns></returns>
+    public bool RemoveErrorState(string deviceId, string errorState)
+    {
+        lock (_lock)
+        {
+            return _activeErrorStates.Remove($"{deviceId}:{errorState}");
+        }
+    }
+    /// <summary>
+    /// Retrieves a read-only collection of all active error states currently stored in the registry. The method uses a lock to ensure thread safety while accessing the internal HashSet that tracks active error states. It returns an array containing all the active error states, allowing external components to view the current error conditions without modifying the underlying data structure.
+    /// </summary>
+    /// <returns></returns>
+    public IReadOnlyCollection<string> GetActiveErrorStates()
+    {
+        lock (_lock)
+        {
+            return _activeErrorStates.ToArray();
         }
     }
     /// <summary>
