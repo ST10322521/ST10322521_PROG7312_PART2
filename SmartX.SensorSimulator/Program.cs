@@ -5,6 +5,7 @@ using SmartX.Shared.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
 
 // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/sealed
 // https://learn.microsoft.com/en-us/dotnet/api/system.timespan.fromseconds?view=net-10.0
@@ -29,7 +30,30 @@ public static class Program
         await using var commandConnection = new HubConnectionBuilder()
             .WithUrl($"{ApiBaseUrl}/smartxHub")
             .WithAutomaticReconnect()
+            .ConfigureLogging(logging =>
+            {
+                logging.SetMinimumLevel(
+                    LogLevel.Debug);
+            })
             .Build();
+
+        commandConnection.Reconnecting += error =>
+        {
+            Console.WriteLine($"[COMMAND] SignalR command stream reconnecting: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        commandConnection.Reconnected += connectionId =>
+        {
+            Console.WriteLine($"[COMMAND] SignalR command stream reconnected. Connection ID: {connectionId}");
+            return Task.CompletedTask;
+        };
+
+        commandConnection.Closed += error =>
+        {
+            Console.WriteLine($"[COMMAND] SignalR command stream closed: {error?.Message}");
+            return Task.CompletedTask;
+        };
 
         using var shutdown = new CancellationTokenSource();
 
@@ -219,9 +243,9 @@ public static class Program
     private sealed class SimulatedDevice
     {
         private readonly HttpClient _httpClient;
+        private readonly SemaphoreSlim _commandLock = new(1, 1);
 
         private Sensor _configuration;
-
         private CancellationTokenSource? _runCancellation;
         private Task? _runTask;
         private int _telemetryCycle;
@@ -246,30 +270,37 @@ public static class Program
         }
         public async Task HandleCommand(DeviceCommandRequest command)
         {
-            switch (command.Command.ToLowerInvariant())
+            await _commandLock.WaitAsync();
+
+            try
             {
-                case "start":
-                    Start();
+                switch (command.Command.ToLowerInvariant())
+                {
+                    case "start":
+                        Start();
+                        Console.WriteLine(
+                            $"[DEVICE: {DeviceId}] Command executed: Start");
+                        break;
 
-                    Console.WriteLine($"[DEVICE: {DeviceId}] Command executed: Start");
+                    case "stop":
+                        await StopAsync();
+                        Console.WriteLine(
+                            $"[DEVICE: {DeviceId}] Command executed: Stop");
+                        break;
 
-                    break;
+                    case "setstate":
+                        await HandleSetStateCommandAsync(command);
+                        break;
 
-                case "stop":
-                    await StopAsync();
-
-                    Console.WriteLine($"[DEVICE: {DeviceId}] Command executed: Stop");
-
-                    break;
-
-                case "setstate":
-                    await HandleSetStateCommandAsync(command);
-
-                    break;
-
-                default:
-                    Console.WriteLine($"[COMMAND] Unsupported command: {command.Command}");
-                    break;
+                    default:
+                        Console.WriteLine(
+                            $"[COMMAND] Unsupported command: {command.Command}");
+                        break;
+                }
+            }
+            finally
+            {
+                _commandLock.Release();
             }
         }
         private async Task HandleSetStateCommandAsync(DeviceCommandRequest command)

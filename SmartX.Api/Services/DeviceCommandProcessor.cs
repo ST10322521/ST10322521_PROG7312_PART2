@@ -37,7 +37,7 @@ public sealed class DeviceCommandProcessor : BackgroundService
                 var command = await _queue.DequeueAsync(stoppingToken);
 
                 await _hubContext.Clients.All.SendAsync(
-                    "ReceiveDeviceCommand",
+                    "DeviceCommandReceived",
                     command,
                     stoppingToken);
 
