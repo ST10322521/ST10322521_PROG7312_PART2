@@ -61,6 +61,40 @@ public sealed class RecommendationService
         }
     }
     /// <summary>
+    /// Generates a list of recommendations based on telemetry patterns observed in the recent history of devices. The method iterates through all sensors in the registry, retrieves their telemetry history, and checks for abnormal readings that fall outside the defined normal range. If a device has a significant number of abnormal readings in its recent history, a recommendation is created to inspect the device. The recommendations are returned as a read-only list of Recommendation objects, each containing details about the device, the reason for the recommendation, and suggested actions.
+    /// </summary>
+    /// <returns></returns>
+    private IReadOnlyList<Recommendation> GetTelemetryPatternRecommendations()
+    {
+        var recommendations = new List<Recommendation>();
+
+        foreach (var sensor in _sensorRegistry.GetAllSensors())
+        {
+            var history = _historyService.GetHistory(sensor.DeviceId);
+
+            if (history.Count < 3) continue;
+
+            var recentReadings = history
+                .OrderByDescending(x => x.Timestamp)
+                .Take(5)
+                .ToList();
+
+            var abnormalReadings = recentReadings.Count(reading =>
+                reading.Value < sensor.NormalMin || reading.Value > sensor.NormalMax);
+
+            if (abnormalReadings < 3) continue;
+
+            recommendations.Add(new Recommendation(
+                sensor.DeviceId,
+                "Repeated telemetry anomaly",
+                $"Recent telemetry history shows {abnormalReadings} of the last {recentReadings.Count} readings outside the normal range.",
+                "Inspect",
+                "High"));
+        }
+
+        return recommendations;
+    }
+    /// <summary>
     /// Generates a list of recommendations based on the current state of devices and user interactions. The method checks for active error states in the sensor registry and creates recommendations for devices that are in a "Critical" or "Disconnected" state. It also analyzes user interactions to identify devices that have been frequently searched while having an active problem, generating additional recommendations for those devices. The final list of recommendations is grouped to remove duplicates and returned as a read-only list.
     /// </summary>
     /// <returns></returns>
@@ -120,6 +154,8 @@ public sealed class RecommendationService
                 "Inspect",
                 "High"));
         }
+
+        recommendations.AddRange(GetTelemetryPatternRecommendations());
 
         return recommendations
             .GroupBy(

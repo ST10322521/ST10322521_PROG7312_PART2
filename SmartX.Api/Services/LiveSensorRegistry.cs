@@ -153,4 +153,15 @@ public sealed class LiveSensorRegistry
             }
         }
     }
+    /// <summary>
+    /// Retrieves a read-only collection of all Sensor objects currently stored in the registry. The method uses a lock to ensure thread safety while accessing the internal dictionary that maps device IDs to Sensor objects. It returns a list containing all the Sensor objects, allowing external components to view the current sensor information without modifying the underlying data structure.
+    /// </summary>
+    /// <returns></returns>
+    public IReadOnlyCollection<Sensor> GetAllSensors()
+    {
+        lock (_lock)
+        {
+            return _devicesByDeviceId.Values.ToList();
+        }
+    }
 }
