@@ -11,12 +11,30 @@
 <MudPaper Class="pa-4">
 
     <div class="d-flex justify-space-between align-center mb-4">
-        <MudText Typo="Typo.h6">Registered Sensors (@sensors.Count)</MudText>
+        <MudText Typo="Typo.h6"> Sensors (@filteredSensors.Count()) </MudText>
 
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
                    OnClick="OpenCreate">
             Add Sensor
         </MudButton>
+    </div>
+
+    <div class="d-flex flex-wrap gap-3 mb-4">
+
+        <MudTextField @bind-Value="searchText" Label="Search devices" Placeholder="Device ID, MAC or location"
+                      Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      Clearable="true" Style="min-width:280px;" />
+
+        <MudSelect T="SensorCategory?" @bind-Value="selectedCategory" Label="Category" Variant="Variant.Outlined"
+                   Clearable="true" Style="min-width:220px;">
+
+            @foreach (var category in Enum.GetValues<SensorCategory>())
+            {
+                <MudSelectItem Value="@((SensorCategory?)category)"> @category </MudSelectItem>
+            }
+
+        </MudSelect>
+
     </div>
 
     @if (loading)
@@ -29,7 +47,7 @@
     }
     else
     {
-        <MudTable Items="sensors" Hover="true" Dense="true" Striped="true">
+        <MudTable Items="filteredSensors" Hover="true" Dense="true" Striped="true">
 
             <HeaderContent>
                 <MudTh>Device</MudTh>

@@ -17,6 +17,16 @@ public partial class Sensors
 
     private List<Sensor> sensors = new();
 
+    private string searchText = string.Empty;
+    private SensorCategory? selectedCategory;
+
+    private IEnumerable<Sensor> filteredSensors => sensors.Where(sensor =>
+            (string.IsNullOrWhiteSpace(searchText) ||
+             sensor.DeviceId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+             sensor.MacAddress.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+             sensor.Location.Contains(searchText, StringComparison.OrdinalIgnoreCase)) &&
+            (!selectedCategory.HasValue || sensor.Category == selectedCategory.Value));
+
     private CreateSensorRequest form = NewForm();
 
     private bool loading;
