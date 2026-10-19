@@ -47,6 +47,10 @@ public partial class Dashboard : IDisposable
 
     private void HandleTelemetry(TelemetryResponse telemetry)
     {
+
+        Console.WriteLine(
+       $"[DASHBOARD] Device={telemetry.DeviceId} Value={telemetry.Value} Delta={telemetry.Delta}");
+
         latestTelemetry[telemetry.DeviceId] = telemetry;
 
         if (telemetry.Status != TelemetryStatus.Normal)

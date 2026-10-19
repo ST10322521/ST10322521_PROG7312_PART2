@@ -62,6 +62,7 @@
                 <MudTh>Device</MudTh>
                 <MudTh>Telemetry</MudTh>
                 <MudTh>Value</MudTh>
+                <MudTh>Change</MudTh>
                 <MudTh>Status</MudTh>
                 <MudTh>Timestamp</MudTh>
             </HeaderContent>
@@ -79,6 +80,10 @@
                     <MudText Typo="Typo.body2">
                         @context.Value
                     </MudText>
+                </MudTd>
+
+                <MudTd DataLabel="Change">
+                    @(context.Delta.HasValue ? context.Delta.Value.ToString("0.##") : "—")
                 </MudTd>
 
                 <MudTd DataLabel="Status">

@@ -32,17 +32,20 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 /// Scoped
 builder.Services.AddScoped<TelemetryService>();
-builder.Services.AddScoped<ITelemetryIngestionService, TelemetryIngestionService>();
-builder.Services.AddSingleton<TelemetryQueueService>();
-builder.Services.AddHostedService<TelemetryQueueProcessor>();
 builder.Services.AddScoped<ISensorService, SensorService>();
 builder.Services.AddScoped<ISensorAttachmentService, SensorAttachmentService>();
+builder.Services.AddScoped<ITelemetryIngestionService, TelemetryIngestionService>();
+
+/// Singleton
+builder.Services.AddSingleton<TelemetryQueueService>();
 builder.Services.AddSingleton<LiveSensorRegistry>();
 builder.Services.AddSingleton<TelemetryHistoryService>();
 builder.Services.AddSingleton<DeviceCommandQueueService>();
 builder.Services.AddSingleton<DeviceCommandProcessor>();
+builder.Services.AddSingleton<TelemetryReadingState>();
 
 /// Hosted
+builder.Services.AddHostedService<TelemetryQueueProcessor>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceCommandProcessor>());
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

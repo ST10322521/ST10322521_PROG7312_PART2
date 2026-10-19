@@ -16,19 +16,21 @@ public class TelemetryIngestionService : ITelemetryIngestionService
     private readonly SmartXDbContext _context;
     private readonly TelemetryService _telemetryService;
     private readonly LiveSensorRegistry? _sensorRegistry;
-    private readonly Dictionary<string, SensorReading> _previousNumericReadings = new();
+    private readonly TelemetryReadingState _readingState;
     private readonly TelemetryHistoryService _historyService;
 
     public TelemetryIngestionService(
     SmartXDbContext context,
     TelemetryService telemetryService,
     LiveSensorRegistry? sensorRegistry,
-    TelemetryHistoryService historyService)
+    TelemetryHistoryService historyService
+    , TelemetryReadingState readingState)
     {
         _context = context;
         _telemetryService = telemetryService;
         _sensorRegistry = sensorRegistry;
         _historyService = historyService;
+        _readingState = readingState;
     }
     /// <summary>
     /// Processes incoming telemetry data from sensors. The method takes a TelemetryRequest object as input, which contains the device ID, timestamp, telemetry type, and telemetry value. It first checks if the sensor exists in the LiveSensorRegistry. If the sensor is not found or the telemetry type does not match the registered sensor's telemetry type, it returns null or throws an exception. Depending on the telemetry type, it processes numeric or boolean values accordingly, updating the previous readings and adding the current reading to the TelemetryHistoryService. Finally, it returns a TelemetryResponse object containing the processed data and status.
@@ -117,13 +119,13 @@ public class TelemetryIngestionService : ITelemetryIngestionService
 
                     double? delta = null;
 
-                    if (_previousNumericReadings.TryGetValue(request.DeviceId, out var previousReading))
+                    if (_readingState.TryGetPrevious(request.DeviceId, out var previousReading))
                     {
                         var deltaReading = currentReading - previousReading;
                         delta = deltaReading.Value;
                     }
 
-                    _previousNumericReadings[request.DeviceId] = currentReading;
+                    _readingState.SetPrevious(currentReading);
 
                     var response = new TelemetryResponse(
                         request.DeviceId,
