@@ -72,8 +72,7 @@ public class TelemetryIngestionServiceTests
             TelemetryType = TelemetryType.Power,
             SamplingIntervalSeconds = 5,
             NormalMin = 500,
-            NormalMax = 2000,
-            IsActive = true
+            NormalMax = 2000
         };
 
         var (context, service, provider) =
@@ -112,8 +111,7 @@ public class TelemetryIngestionServiceTests
             TelemetryType = TelemetryType.RelayState,
             SamplingIntervalSeconds = 5,
             NormalMin = 0,
-            NormalMax = 0,
-            IsActive = true
+            NormalMax = 0
         };
 
         var (context, service, provider) =
@@ -152,8 +150,7 @@ public class TelemetryIngestionServiceTests
             TelemetryType = TelemetryType.Power,
             SamplingIntervalSeconds = 5,
             NormalMin = 500,
-            NormalMax = 2000,
-            IsActive = true
+            NormalMax = 2000
         };
 
         var (context, service, provider) =
@@ -191,8 +188,7 @@ public class TelemetryIngestionServiceTests
             TelemetryType = TelemetryType.Power,
             SamplingIntervalSeconds = 5,
             NormalMin = 500,
-            NormalMax = 2000,
-            IsActive = true
+            NormalMax = 2000
         };
 
         var (context, service, provider) =

@@ -73,8 +73,7 @@ public class SensorService : ISensorService
             TelemetryType = request.TelemetryType,
             SamplingIntervalSeconds = request.SamplingIntervalSeconds,
             NormalMin = request.NormalMin,
-            NormalMax = request.NormalMax,
-            IsActive = true
+            NormalMax = request.NormalMax
         };
 
         _context.Sensors.Add(sensor);
@@ -159,21 +158,5 @@ public class SensorService : ISensorService
         await _sensorRegistry.RefreshAsync();
 
         return true;
-    }
-
-    public async Task<ServiceResult<Sensor>> SetActiveAsync(Guid id, bool isActive)
-    {
-        var sensor = _context.Sensors.FirstOrDefault(s => s.Id == id);
-        if (sensor is null)
-        {
-            return new(ServiceStatus.NotFound);
-        }
-
-        sensor.IsActive = isActive;
-        await _context.SaveChangesAsync();
-
-        await _sensorRegistry.RefreshAsync();
-
-        return new(ServiceStatus.Success, Data: sensor);
     }
 }

@@ -96,26 +96,6 @@ public class SensorsController : ControllerBase
         };
     }
     /// <summary>
-    /// Sets the active status of a sensor based on the provided ID and request data.
-    /// If the sensor does not exist, a NotFound response is returned.
-    /// If the update is successful, an Ok response with the updated sensor data is returned.
-    /// If an unexpected error occurs, a 500 Internal Server Error response is returned.
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="request"></param>
-    /// <returns></returns>
-    [HttpPatch("{id:guid}/active")]
-    public async Task<ActionResult<Sensor>> SetSensorActive(Guid id, UpdateSensorActiveRequest request)
-    {
-        var result = await _sensorService.SetActiveAsync(id, request.IsActive);
-        return result.Status switch
-        {
-            ServiceStatus.NotFound => NotFound(),
-            ServiceStatus.Success => Ok(result.Data),
-            _ => StatusCode(500)
-        };
-    }
-    /// <summary>
     /// Deletes a sensor based on the provided ID.
     /// If the sensor does not exist, a NotFound response is returned.
     /// If the deletion is successful, a NoContent response is returned.

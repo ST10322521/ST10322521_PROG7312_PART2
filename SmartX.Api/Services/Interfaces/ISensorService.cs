@@ -14,7 +14,5 @@ public interface ISensorService
 
     Task<ServiceResult<Sensor>> UpdateAsync(Guid id, CreateSensorRequest request);
 
-    Task<ServiceResult<Sensor>> SetActiveAsync(Guid id, bool isActive);
-
     Task<bool> DeleteAsync(Guid id);
 }

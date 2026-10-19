@@ -128,26 +128,7 @@ public partial class Sensors
         }
     }
     /// <summary>
-    /// Asynchronously toggles the active status of a sensor. The method takes a Sensor object as input, clears any previous error messages, and attempts to update the sensor's active status by calling the UpdateActiveAsync method of the SensorService with the sensor's ID and the negated value of its current IsActive property. After successfully updating the status, it reloads the list of sensors. If an exception occurs during the process, it captures and displays the error message.
-    /// </summary>
-    /// <param name="sensor"></param>
-    /// <returns></returns>
-    private async Task ToggleActive(Sensor sensor)
-    {
-        error = null;
-
-        try
-        {
-            await SensorService.UpdateActiveAsync(sensor.Id, !sensor.IsActive);
-            await LoadSensors();
-        }
-        catch (Exception ex)
-        {
-            error = $"Unable to change sensor status: {ex.Message}";
-        }
-    }
-    /// <summary>
-    /// Asynchronously deletes a sensor. The method takes a Sensor object as input, clears any previous error messages, and attempts to delete the sensor by calling the DeleteSensorAsync method of the SensorService with the sensor's ID. After successfully deleting the sensor, it reloads the list of sensors. If the deleted sensor was currently selected for viewing attachments, it closes the attachments view. If an exception occurs during the deletion process, it captures and displays the error message.
+    /// Asynchronously deletes a sensor. The method takes a Sensor object as input, clears any previous error messages, and attempts to delete the sensor by calling the DeleteSensorAsync method of the SensorService with the sensor's ID. After successfully deleting the sensor, it reloads the list of sensors. If an exception occurs during the deletion process, it captures and displays the error message.
     /// </summary>
     /// <param name="sensor"></param>
     /// <returns></returns>

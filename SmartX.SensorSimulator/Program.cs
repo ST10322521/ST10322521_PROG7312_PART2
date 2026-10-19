@@ -4,9 +4,11 @@ using SmartX.Shared.Enums;
 using SmartX.Shared.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.SignalR.Client;
 
 // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/sealed
 // https://learn.microsoft.com/en-us/dotnet/api/system.timespan.fromseconds?view=net-10.0
+// https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.task.completedtask?view=net-10.0
 
 namespace SmartX.SensorSimulator;
 
@@ -23,6 +25,11 @@ public static class Program
         Console.WriteLine();
 
         using var httpClient = new HttpClient { BaseAddress = new Uri(ApiBaseUrl), Timeout = TimeSpan.FromSeconds(10) };
+
+        await using var commandConnection = new HubConnectionBuilder()
+            .WithUrl($"{ApiBaseUrl}/smartxHub")
+            .WithAutomaticReconnect()
+            .Build();
 
         using var shutdown = new CancellationTokenSource();
 
@@ -41,6 +48,17 @@ public static class Program
         jsonOptions.Converters.Add(new JsonStringEnumConverter());
 
         var fleet = new SimulatedDeviceFleet(httpClient, jsonOptions);
+
+        commandConnection.On<DeviceCommandRequest>("DeviceCommandReceived", async command =>
+        {
+            Console.WriteLine($"[COMMAND] Received command: Device={command.DeviceId} | Command={command.Command}");
+
+            await fleet.HandleCommand(command);
+        });
+
+        await commandConnection.StartAsync();
+
+        Console.WriteLine("[COMMAND] SignalR command stream connected.");
 
         try
         {
@@ -72,6 +90,17 @@ public static class Program
         {
             _httpClient = httpClient;
             _jsonOptions = jsonOptions;
+        }
+        public async Task HandleCommand(DeviceCommandRequest command)
+        {
+            if (!_devices.Values.Any(device => string.Equals(device.DeviceId, command.DeviceId, StringComparison.OrdinalIgnoreCase)))
+            {
+                Console.WriteLine($"[COMMAND] Device not found: {command.DeviceId}");
+                return;
+            }
+
+            var device = _devices.Values.First(device => string.Equals(device.DeviceId, command.DeviceId, StringComparison.OrdinalIgnoreCase));
+            await device.HandleCommand(command);
         }
         /// <summary>
         /// Runs the fleet reconciliation loop, periodically checking the API for the current state of devices and updating the simulator accordingly. The loop continues until the provided cancellation token is triggered, at which point all devices are stopped gracefully.
@@ -141,9 +170,9 @@ public static class Program
 
                 _devices.Add(sensor.Id, device);
 
-                Console.WriteLine($"[FLEET] Device discovered: {sensor.DeviceId} | Type: {sensor.TelemetryType} | Active: {sensor.IsActive}");
+                Console.WriteLine($"[FLEET] Device discovered: {sensor.DeviceId} | Type: {sensor.TelemetryType}");
 
-                await device.ApplyActiveStateAsync(cancellationToken);
+                device.Start();
             }
 
             var removedDevices = _devices.Where(pair => !apiSensorId.Contains(pair.Key)).Select(pair => pair.Value).ToList();
@@ -199,6 +228,7 @@ public static class Program
         public bool IsRunning => _runTask is not null && !_runTask.IsCompleted;
         public Guid SensorId => _configuration.Id;
         public string DeviceId => _configuration.DeviceId;
+        private bool? _commandedActuatorState;
 
         // Cycle lengths for different telemetry states
         private const int NormalCycleLength = 10;
@@ -214,8 +244,56 @@ public static class Program
             _configuration = configuration;
             _httpClient = httpClient;
         }
+        public async Task HandleCommand(DeviceCommandRequest command)
+        {
+            switch (command.Command.ToLowerInvariant())
+            {
+                case "start":
+                    Start();
+
+                    Console.WriteLine($"[DEVICE: {DeviceId}] Command executed: Start");
+
+                    break;
+
+                case "stop":
+                    await StopAsync();
+
+                    Console.WriteLine($"[DEVICE: {DeviceId}] Command executed: Stop");
+
+                    break;
+
+                case "setstate":
+                    await HandleSetStateCommandAsync(command);
+
+                    break;
+
+                default:
+                    Console.WriteLine($"[COMMAND] Unsupported command: {command.Command}");
+                    break;
+            }
+        }
+        private async Task HandleSetStateCommandAsync(DeviceCommandRequest command)
+        {
+            if (_configuration.TelemetryType is not (TelemetryType.RelayState or TelemetryType.ValveState))
+            {
+                Console.WriteLine($"[DEVICE: {DeviceId}] SetState rejected: device is not an actuator");
+                return;
+            }
+
+            if (!bool.TryParse(command.Value?.ToString(), out var state))
+            {
+                Console.WriteLine($"[DEVICE: {DeviceId}] SetState rejected: value must be true or false.");
+                return;
+            }
+
+            _commandedActuatorState = state;
+
+            Console.WriteLine($"[DEVICE: {DeviceId}] Command executed: SET STATE = {state}");
+
+            await Task.CompletedTask;
+        }
         /// <summary>
-        /// Updates the configuration of the simulated device based on the provided sensor configuration. If any relevant properties have changed (telemetry type, sampling interval, range, or active state), the method logs the changes and applies the new active state to start or stop telemetry streaming as needed.
+        /// Updates the configuration of the simulated device based on the provided sensor configuration. If the telemetry type, sampling interval, or normal range has changed, the method logs the updated configuration. This allows the simulator to reflect changes made to the device's settings in the API.
         /// </summary>
         /// <param name="configuration"></param>
         /// <param name="cancellationToken"></param>
@@ -228,37 +306,17 @@ public static class Program
 
             var rangeChanged = _configuration.NormalMin != configuration.NormalMin || _configuration.NormalMax != configuration.NormalMax;
 
-            var activeChanged = _configuration.IsActive != configuration.IsActive;
-
             _configuration = configuration;
 
-            if (telemetryChanged || intervalChanged || rangeChanged || activeChanged)
+            if (telemetryChanged || intervalChanged || rangeChanged)
             {
-                Console.WriteLine($"[DEVICE: {DeviceId}] Configuration updated | Type: {configuration.TelemetryType} | Interval: {configuration.SamplingIntervalSeconds}s | Range: [{configuration.NormalMin}, {configuration.NormalMax}] | Active: {configuration.IsActive}");
+                Console.WriteLine($"[DEVICE: {DeviceId}] Configuration updated | Type: {configuration.TelemetryType} | Interval: {configuration.SamplingIntervalSeconds}s | Range: [{configuration.NormalMin}, {configuration.NormalMax}]");
             }
-
-            await ApplyActiveStateAsync(cancellationToken);
-        }
-        /// <summary>
-        /// Applies the current active state of the device to start or stop telemetry streaming.
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public async Task ApplyActiveStateAsync(CancellationToken cancellationToken)
-        {
-            if (_configuration.IsActive)
-            {
-                Start();
-
-                return;
-            }
-
-            await StopAsync();
         }
         /// <summary>
         /// Starts the telemetry streaming for the device if it is not already running. This method initializes a cancellation token source and starts the asynchronous telemetry generation and sending loop.
         /// </summary>
-        private void Start()
+        public void Start()
         {
             if (IsRunning)
             {
@@ -307,44 +365,67 @@ public static class Program
             }
         }
         /// <summary>
-        /// Runs the telemetry generation and sending loop for the device. This method is called repeatedly in a loop until the cancellation token is triggered. It generates telemetry data based on the device's configuration, sends it to the API, and logs the result. If an anomaly is simulated (e.g., disconnect), the telemetry is skipped for that cycle.
+        /// Runs the telemetry generation and sending loop for the device. The method continuously generates telemetry data based on the device's configuration and sends it to the API until the provided cancellation token is triggered. It handles anomalies, logs the results of telemetry sends, and manages delays between telemetry transmissions based on the configured sampling interval.
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         private async Task RunAsync(CancellationToken cancellationToken)
         {
-            _telemetryCycle++;
-
-            var cyclePosition = (_telemetryCycle - 1) % TotalAnomalyCycleLength;
-
-            var anomaly = GetAnomalyType(cyclePosition);
-
-            if (anomaly == "Disconnect")
+            while (!cancellationToken.IsCancellationRequested)
             {
-                Console.WriteLine($"[DEVICE: {DeviceId}] ANOMALY: Simulated disconnect - telemetry skipped.");
-                return;
-            }
+                _telemetryCycle++;
 
-            var telemetry = CreateTelemetry(anomaly);
+                var cyclePosition = (_telemetryCycle - 1) % TotalAnomalyCycleLength;
 
-            try
-            {
-                var response = await _httpClient.PostAsJsonAsync("/api/telemetry", telemetry, cancellationToken);
+                var anomaly = GetAnomalyType(cyclePosition);
 
-                if (response.IsSuccessStatusCode)
+                if (anomaly == "Disconnect")
                 {
-                    Console.WriteLine($"[DEVICE: {DeviceId}] Telemetry sent: {telemetry.Value} | Type: {telemetry.TelemetryType} | Timestamp: {telemetry.Timestamp:HH:mm:ss}");
+                    Console.WriteLine($"[DEVICE: {DeviceId}] ANOMALY: Simulated disconnect - telemetry skipped.");
                 }
                 else
                 {
-                    var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var telemetry = CreateTelemetry(anomaly);
 
-                    Console.WriteLine($"[DEVICE: {DeviceId}] Telemetry send failed: {response.StatusCode} | Anomaly: {anomaly} | Body: {body}");
+                    try
+                    {
+                        var response = await _httpClient.PostAsJsonAsync(
+                            "/api/telemetry",
+                            telemetry,
+                            cancellationToken);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            Console.WriteLine(
+                                $"[DEVICE: {DeviceId}] Telemetry sent: {telemetry.Value} | " +
+                                $"Type: {telemetry.TelemetryType} | " +
+                                $"Timestamp: {telemetry.Timestamp:HH:mm:ss}");
+                        }
+                        else
+                        {
+                            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                            Console.WriteLine($"[DEVICE: {DeviceId}] Telemetry send failed: {response.StatusCode} | Anomaly: {anomaly} | Body: {body}");
+                        }
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    catch (HttpRequestException ex)
+                    {
+                        Console.WriteLine($"[DEVICE: {DeviceId}] API connection error: {ex.Message}");
+                    }
                 }
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.WriteLine($"[DEVICE: {DeviceId}] API connection error: {ex.Message}");
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, _configuration.SamplingIntervalSeconds)), cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
             }
         }
         /// <summary>
@@ -392,45 +473,6 @@ public static class Program
             }
         }
         /// <summary>
-        /// Generates and sends telemetry data for the device based on its configuration and the current anomaly type. The method increments the telemetry cycle counter, determines the current anomaly type, creates a telemetry request, and sends it to the API. If an anomaly is simulated (e.g., disconnect), the telemetry is skipped for that cycle. The method logs the result of the telemetry send operation, including any errors encountered during the process.
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        private async Task GenerateAndSendTelemetryAsync(CancellationToken cancellationToken)
-        {
-            // Increment the telemetry cycle counter and determine the current anomaly type based on the cycle position
-            _telemetryCycle++;
-            var cyclePosition = (_telemetryCycle - 1) % TotalAnomalyCycleLength;
-            var anomaly = GetAnomalyType(cyclePosition);
-            if (anomaly == "Disconnect")
-            {
-                Console.WriteLine($"[DEVICE: {DeviceId}] ANOMALY: Simulated disconnect - telemetry skipped.");
-                return;
-            }
-            var telemetry = CreateTelemetry(anomaly);
-
-            // Send the telemetry data to the API and log the result
-            try
-            {
-                var reponse = await _httpClient.PostAsJsonAsync("/api/telemetry", telemetry, cancellationToken);
-
-                if (reponse.IsSuccessStatusCode)
-                {
-                    Console.WriteLine($"[DEVICE: {DeviceId}] Telemetry sent: {telemetry.Value} | Type: {telemetry.TelemetryType} | Timestamp: {telemetry.Timestamp:HH:mm:ss}");
-                }
-                else
-                {
-                    var body = await reponse.Content.ReadAsStringAsync(cancellationToken);
-
-                    Console.WriteLine($"[DEVICE: {DeviceId}] Telemetry send failed: {reponse.StatusCode} | Body: {body}");
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.WriteLine($"[DEVICE: {DeviceId}] API connection error: {ex.Message}");
-            }
-        }
-        /// <summary>
         /// Creates a telemetry request based on the device's configuration. The method generates a random value within the specified range for the configured telemetry type and constructs a TelemetryRequest object with the device ID, telemetry type, generated value, and current timestamp. If the telemetry type is unsupported, an InvalidOperationException is thrown.
         /// </summary>
         /// <returns></returns>
@@ -451,9 +493,9 @@ public static class Program
 
                 TelemetryType.Current => GenerateIntegerValue(anomaly),
 
-                TelemetryType.RelayState => Random.Shared.Next(0, 2) == 1,
+                TelemetryType.RelayState => _commandedActuatorState ?? Random.Shared.Next(0, 2) == 1,
 
-                TelemetryType.ValveState => Random.Shared.Next(0, 2) == 1,
+                TelemetryType.ValveState => _commandedActuatorState ?? Random.Shared.Next(0, 2) == 1,
 
                 _ => throw new InvalidOperationException($"Unsupported telemetry type: {_configuration.TelemetryType}")
             };

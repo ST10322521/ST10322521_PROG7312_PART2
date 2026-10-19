@@ -38,7 +38,6 @@
                 <MudTh>Location</MudTh>
                 <MudTh>Interval</MudTh>
                 <MudTh>Range</MudTh>
-                <MudTh>Status</MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
 
@@ -54,12 +53,6 @@
                 <MudTd DataLabel="Interval">@context.SamplingIntervalSeconds s</MudTd>
                 <MudTd DataLabel="Range">@context.NormalMin - @context.NormalMax</MudTd>
 
-                <MudTd DataLabel="Status">
-                    <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small">
-                        @(context.IsActive ? "Active" : "Inactive")
-                    </MudChip>
-                </MudTd>
-
                 <MudTd DataLabel="Actions">
 
                     <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.AttachFile"
@@ -70,13 +63,6 @@
                     <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Edit"
                                OnClick="@(() => OpenEdit(context))">
                         Edit
-                    </MudButton>
-
-                    <MudButton Size="Size.Small" Variant="Variant.Text"
-                               Color="@(context.IsActive ? Color.Warning : Color.Success)"
-                               StartIcon="@(context.IsActive ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
-                               OnClick="@(() => ToggleActive(context))">
-                        @(context.IsActive ? "Disable" : "Enable")
                     </MudButton>
 
                     <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error"

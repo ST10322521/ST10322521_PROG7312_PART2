@@ -15,6 +15,5 @@ namespace SmartX.Shared.Models
         public int SamplingIntervalSeconds { get; set; }
         public double NormalMin { get; set; } = 0;
         public double NormalMax { get; set; } = 0;
-        public bool IsActive { get; set; }
     }
 }
