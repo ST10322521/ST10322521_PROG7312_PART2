@@ -1,5 +1,7 @@
 using SmartX.Shared.Models;
 
+namespace SmartX.Shared.Validation;
+
 public static class DeploymentValidation
 {
     /// <summary>

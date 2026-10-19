@@ -7,6 +7,7 @@ public sealed class SignalRService : IAsyncDisposable
 {
     private readonly HubConnection _connection;
     public event Action<TelemetryResponse>? TelemetryReceived;
+    public event Action<DeviceCommandRequest>? CommandReceived;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SignalRService"/> class and sets up the SignalR connection with automatic reconnection and event handlers for connection state changes.
@@ -22,6 +23,13 @@ public sealed class SignalRService : IAsyncDisposable
         {
             Console.WriteLine($"Telemetry received: DeviceId={response.DeviceId}, Value={response.Value}, Status={response.Status}");
             TelemetryReceived?.Invoke(response);
+        });
+
+        _connection.On<DeviceCommandRequest>("DeviceCommandReceived", command =>
+        {
+            Console.WriteLine($"Command received: DeviceId={command.DeviceId}, Command={command.Command}");
+
+            CommandReceived?.Invoke(command);
         });
 
         _connection.Reconnecting += error =>

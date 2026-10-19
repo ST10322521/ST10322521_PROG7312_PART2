@@ -1,0 +1,78 @@
+@page "/commands"
+@using SmartX.Shared.DTOs
+@inject HttpClient Http
+@inject SmartX.Client.Services.SignalRService SignalR
+
+<PageTitle>Command Stream</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Real-Time Command Stream</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="5">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Manual Override</MudText>
+
+            <MudTextField @bind-Value="deviceId" Label="Device ID" Variant="Variant.Outlined" Class="mb-3" />
+
+            <MudSelect T="string" @bind-Value="selectedCommand" Label="Command" Variant="Variant.Outlined" Class="mb-3">
+                <MudSelectItem Value="@("Start")">Start</MudSelectItem>
+                <MudSelectItem Value="@("Stop")">Stop</MudSelectItem>
+                <MudSelectItem Value="@("SetState")">Set State</MudSelectItem>
+            </MudSelect>
+
+            @if (selectedCommand == "SetState")
+            {
+                <MudTextField @bind-Value="commandValue" Label="State Value" Variant="Variant.Outlined" Class="mb-3" />
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SendCommandAsync" Disabled="@isSending">
+                Send Command
+            </MudButton>
+
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" Class="ml-2" OnClick="UndoAsync">
+                Undo Last Command
+            </MudButton>
+
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <MudAlert Severity="@messageSeverity" Class="mt-3">
+                    @message
+                </MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="7">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Command History</MudText>
+
+            @if (commandHistory.Count == 0)
+            {
+                <MudText Color="Color.Secondary">
+                    No commands received yet.
+                </MudText>
+            }
+            else
+            {
+                <MudList T="DeviceCommandRequest" Dense="true">
+                    @foreach (var command in commandHistory)
+                    {
+                        <MudListItem T="DeviceCommandRequest">
+                            <MudText>
+                                <b>@command.DeviceId</b>
+                                — @command.Command
+                                @if (command.Value is not null)
+                                {
+                                    <span> (@command.Value)</span>
+                                }
+                            </MudText>
+                            <MudText Typo="Typo.caption">
+                                @command.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                            </MudText>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
