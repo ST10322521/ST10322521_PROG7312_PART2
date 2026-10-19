@@ -11,6 +11,7 @@ public sealed class DeviceCommandProcessor : BackgroundService
     private readonly DeviceCommandQueueService _queue;
     private IHubContext<SmartXHub> _hubContext;
     private readonly ILogger<DeviceCommandProcessor> _logger;
+    private readonly Stack<DeviceCommandRequest> _commandHistory = new();
 
     public DeviceCommandProcessor(
         DeviceCommandQueueService queue,
@@ -36,6 +37,8 @@ public sealed class DeviceCommandProcessor : BackgroundService
             {
                 var command = await _queue.DequeueAsync(stoppingToken);
 
+                _commandHistory.Push(command);
+
                 await _hubContext.Clients.All.SendAsync(
                     "DeviceCommandReceived",
                     command,
@@ -54,6 +57,31 @@ public sealed class DeviceCommandProcessor : BackgroundService
         }
 
         _logger.LogInformation("Smart-X device command processor stropped.");
+    }
+    public async Task<bool> UndoLastCommandAsync(CancellationToken cancellationToken = default)
+    {
+        if (_commandHistory.Count is 0)
+        {
+            return false;
+        }
+
+        var lastCommand = _commandHistory.Pop();
+        var undoCommand = new DeviceCommandRequest
+        {
+            DeviceId = lastCommand.DeviceId,
+            Command = lastCommand.Command.Equals("Start", StringComparison.OrdinalIgnoreCase) ? "Stop" : "Start",
+            Value = null,
+            Timestamp = DateTime.UtcNow
+        };
+
+        await _hubContext.Clients.All.SendAsync(
+            "DeviceCommandReceived",
+            undoCommand,
+            cancellationToken);
+
+        _logger.LogInformation($"Undo command dispatched: Device={undoCommand.DeviceId}, Command={undoCommand.Command}");
+
+        return true;
     }
 }
 
