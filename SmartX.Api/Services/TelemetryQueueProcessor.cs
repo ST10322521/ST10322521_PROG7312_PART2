@@ -101,9 +101,7 @@ public sealed class TelemetryQueueProcessor : BackgroundService
             _criticalQueue.Enqueue(response, 0);
         }
 
-        _logger.LogWarning(
-            "Critical telemetry queued with priority: Device={DeviceId}",
-            response.DeviceId);
+        _logger.LogWarning("Critical telemetry queued with priority: Device={DeviceId}", response.DeviceId);
     }
     /// <summary>
     /// Processes critical telemetry alerts from the priority queue asynchronously. The method continuously dequeues critical telemetry responses from the _criticalQueue and publishes them to all connected clients via SignalR using the PublishTelemetryAsync method. The processing continues until the queue is empty or the cancellation token is triggered.

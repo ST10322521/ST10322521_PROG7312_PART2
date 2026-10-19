@@ -1369,5 +1369,3 @@ Sensor Simulator
 ```
 
 The implementation demonstrates the required Part 1 and Part 2 functionality as an integrated application, with the required data structures and algorithms actively used by the runtime system.
-
-Network Topology and Mesh Routing remain outside the current scope and are reserved for the later project stage.
