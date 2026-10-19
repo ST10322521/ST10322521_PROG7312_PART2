@@ -43,6 +43,7 @@ builder.Services.AddSingleton<TelemetryHistoryService>();
 builder.Services.AddSingleton<DeviceCommandQueueService>();
 builder.Services.AddSingleton<DeviceCommandProcessor>();
 builder.Services.AddSingleton<TelemetryReadingState>();
+builder.Services.AddSingleton<RecommendationService>();
 
 /// Hosted
 builder.Services.AddHostedService<TelemetryQueueProcessor>();

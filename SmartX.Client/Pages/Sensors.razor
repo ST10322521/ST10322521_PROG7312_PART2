@@ -30,10 +30,17 @@
 
             @foreach (var category in Enum.GetValues<SensorCategory>())
             {
-                <MudSelectItem Value="@((SensorCategory?)category)"> @category </MudSelectItem>
+                <MudSelectItem Value="@((SensorCategory?)category)">
+                    @category
+                </MudSelectItem>
             }
 
         </MudSelect>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search"
+                   OnClick="RecordSearch">
+            Search
+        </MudButton>
 
     </div>
 

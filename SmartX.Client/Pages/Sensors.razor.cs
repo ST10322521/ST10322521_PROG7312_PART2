@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using SmartX.Client.Services;
@@ -9,6 +10,8 @@ namespace SmartX.Client.Pages;
 
 public partial class Sensors
 {
+    [Inject]
+    private HttpClient Http { get; set; } = null!;
     [Inject]
     private SensorService SensorService { get; set; } = null!;
 
@@ -298,5 +301,39 @@ public partial class Sensors
             NormalMin = 18,
             NormalMax = 28
         };
+    }
+    private async Task RecordSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchText) && !selectedCategory.HasValue)
+        {
+            return;
+        }
+
+        var deviceId = sensors
+        .Where(s =>
+            (string.IsNullOrWhiteSpace(searchText) ||
+             s.DeviceId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+             s.MacAddress.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+             s.Location.Contains(searchText, StringComparison.OrdinalIgnoreCase)) &&
+            (!selectedCategory.HasValue ||
+             s.Category == selectedCategory.Value))
+        .Select(s => s.DeviceId)
+        .FirstOrDefault();
+
+        try
+        {
+            await Http.PostAsJsonAsync("api/recommendations/interactions", new
+            {
+                action = "Search",
+                query = searchText,
+                deviceId,
+                command = (string?)null,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[RECOMMENDATIONS] Error recording search: {ex.Message}");
+        }
     }
 }

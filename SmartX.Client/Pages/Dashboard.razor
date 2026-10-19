@@ -77,6 +77,86 @@
 <MudPaper Class="pa-4 mb-4">
 
     <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.h6">
+            Suggested Actions
+        </MudText>
+
+        <MudChip T="string" Size="Size.Small" Color="@(recommendations.Count > 0
+                     ? Color.Warning
+                     : Color.Success)">
+            @recommendations.Count Suggested
+        </MudChip>
+    </div>
+
+    @if (recommendations.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">
+            No automated insights or suggested actions are currently available.
+        </MudAlert>
+    }
+    else
+    {
+        @foreach (var recommendation in recommendations)
+        {
+            <MudPaper Class="pa-3 mb-3" Outlined="true">
+
+                <div class="d-flex flex-wrap justify-space-between align-center gap-3">
+
+                    <div>
+                        <MudText Typo="Typo.subtitle1">
+                            @recommendation.Title
+                        </MudText>
+
+                        <MudText Typo="Typo.body2">
+                            <strong>Device:</strong>
+                            @recommendation.DeviceId
+                        </MudText>
+
+                        <MudText Typo="Typo.body2">
+                            @recommendation.Reason
+                        </MudText>
+
+                        <MudChip T="string" Size="Size.Small" Color="@(recommendation.Priority.Equals(
+                                     "High",
+                                     StringComparison.OrdinalIgnoreCase)
+                                     ? Color.Error
+                                     : Color.Warning)" Class="mt-2">
+                            @recommendation.Priority Priority
+                        </MudChip>
+                    </div>
+
+                    <div>
+
+                        @if (recommendation.SuggestedCommand.Equals(
+                            "Start",
+                            StringComparison.OrdinalIgnoreCase))
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@recommendationActionRunning"
+                                       OnClick="@(() => ExecuteRecommendationAsync(recommendation))">
+                                Start Device
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                       Href="@($"/commands?deviceId={Uri.EscapeDataString(recommendation.DeviceId)}")">
+                                Inspect Device
+                            </MudButton>
+                        }
+
+                    </div>
+
+                </div>
+
+            </MudPaper>
+        }
+    }
+
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4">
+
+    <div class="d-flex justify-space-between align-center mb-3">
         <MudText Typo="Typo.h6">Live Telemetry</MudText>
 
         <MudChip T="string" Size="Size.Small" Color="@(signalRConnected ? Color.Success : Color.Error)">

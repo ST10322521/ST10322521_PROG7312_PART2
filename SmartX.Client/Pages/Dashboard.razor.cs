@@ -28,6 +28,8 @@ public partial class Dashboard : IDisposable
     private string? error;
     private List<string> activeErrorStates = new();
     private List<string> disconnectedDevices = new();
+    private List<RecommendationViewModel> recommendations = new();
+    private bool recommendationActionRunning;
 
     protected override async Task OnInitializedAsync()
     {
@@ -40,6 +42,9 @@ public partial class Dashboard : IDisposable
         try
         {
             sensors = await SensorService.GetSensorsAsync();
+
+            await LoadActiveErrorAlertsAsync();
+            await LoadRecommendationsAsync();
         }
         catch (Exception ex)
         {
@@ -79,6 +84,7 @@ public partial class Dashboard : IDisposable
     private async Task RefreshAlertsAsync()
     {
         await LoadActiveErrorAlertsAsync();
+        await LoadRecommendationsAsync();
         await InvokeAsync(StateHasChanged);
     }
     /// <summary>
@@ -118,6 +124,70 @@ public partial class Dashboard : IDisposable
             TelemetryStatus.Critical => Color.Error,
             _ => Color.Default
         };
+    }
+    /// <summary>
+    /// Asynchronously loads the list of recommendations from the server. The method sends an HTTP GET request to the "api/recommendations" endpoint and expects a response containing a list of RecommendationViewModel objects. If the request is successful, it updates the local list of recommendations. In case of an exception during the request, it logs the error message to the console.
+    /// </summary>
+    /// <returns></returns>
+    private async Task LoadRecommendationsAsync()
+    {
+        try
+        {
+            var result = await Http.GetFromJsonAsync<List<RecommendationViewModel>>("api/recommendations", new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            recommendations = result ?? new List<RecommendationViewModel>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DASHBOARD] Error loading recommendations: {ex.Message}");
+        }
+    }
+    /// <summary>
+    /// Asynchronously executes a recommendation action based on the provided RecommendationViewModel. If the suggested command is "Inspect", the method does nothing. For other commands, it constructs a DeviceCommandRequest and sends it to the "api/commands" endpoint via an HTTP POST request. If the request is successful, it reloads the recommendations. The method also manages a flag to indicate that a recommendation action is currently running, and it handles exceptions by logging error messages to the console.
+    /// </summary>
+    /// <param name="recommendation"></param>
+    /// <returns></returns>
+    private async Task ExecuteRecommendationAsync(RecommendationViewModel recommendation)
+    {
+        if (recommendation.SuggestedCommand.Equals("Inspect", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(recommendation.DeviceId))
+        {
+            return;
+        }
+
+        recommendationActionRunning = true;
+
+        try
+        {
+            var request = new DeviceCommandRequest
+            {
+                DeviceId = recommendation.DeviceId,
+                Command = recommendation.SuggestedCommand,
+                Value = null,
+                Timestamp = DateTime.UtcNow
+            };
+
+            var response = await Http.PostAsJsonAsync("api/commands", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadRecommendationsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DASHBOARD] Recommendation action failed: {ex.Message}");
+        }
+        finally
+        {
+            recommendationActionRunning = false;
+        }
     }
     /// <summary>
     /// Disposes of the Dashboard component by unsubscribing from the TelemetryReceived event of the SignalR service. This ensures that when the component is no longer in use, it stops receiving telemetry updates, preventing potential memory leaks or unintended behavior.

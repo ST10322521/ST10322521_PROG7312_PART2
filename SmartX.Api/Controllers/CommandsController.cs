@@ -10,11 +10,13 @@ public class CommandsController : ControllerBase
 {
     private readonly DeviceCommandQueueService _commandQueue;
     private readonly DeviceCommandProcessor _commandProcessor;
+    private readonly RecommendationService _recommendationService;
 
-    public CommandsController(DeviceCommandQueueService commandQueue, DeviceCommandProcessor commandProcessor)
+    public CommandsController(DeviceCommandQueueService commandQueue, DeviceCommandProcessor commandProcessor, RecommendationService recommendationService)
     {
         _commandQueue = commandQueue;
         _commandProcessor = commandProcessor;
+        _recommendationService = recommendationService;
     }
     /// <summary>
     /// Receives a device command request and enqueues it for processing. The method validates the incoming request to ensure that the DeviceId and Command are provided and that the command is supported. If the request is valid, it creates a new DeviceCommandRequest object, sets its properties, and enqueues it using the DeviceCommandQueueService. The method returns an HTTP 202 Accepted response with a message indicating that the command has been queued successfully, along with the current length of the queue.
@@ -52,6 +54,16 @@ public class CommandsController : ControllerBase
         };
 
         _commandQueue.Enqueue(queuedCommand);
+
+        _recommendationService.RecordInteraction(
+            new Models.UserInteraction(
+                "Command",
+                null,
+                queuedCommand.DeviceId,
+                queuedCommand.Command,
+                queuedCommand.Timestamp
+            )
+        );
 
         return Accepted(new
         {
