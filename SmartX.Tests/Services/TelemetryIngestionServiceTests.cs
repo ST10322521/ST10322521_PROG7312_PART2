@@ -20,8 +20,7 @@ public class TelemetryIngestionServiceTests
     private static async Task<(
         SmartXDbContext Context,
         TelemetryIngestionService Service,
-        ServiceProvider Provider)> CreateServiceAsync(
-        Sensor? sensor = null)
+        ServiceProvider Provider)> CreateServiceAsync(Sensor? sensor = null)
     {
         var options = CreateOptions();
 
@@ -42,6 +41,7 @@ public class TelemetryIngestionServiceTests
 
         services.AddSingleton<LiveSensorRegistry>();
         services.AddSingleton<TelemetryService>();
+        services.AddSingleton<TelemetryHistoryService>();
 
         var provider = services.BuildServiceProvider();
 
@@ -53,7 +53,8 @@ public class TelemetryIngestionServiceTests
         var service = new TelemetryIngestionService(
             provider.GetRequiredService<SmartXDbContext>(),
             provider.GetRequiredService<TelemetryService>(),
-            registry);
+            registry,
+            provider.GetRequiredService<TelemetryHistoryService>());
 
         return (context, service, provider);
     }

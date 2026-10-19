@@ -17,18 +17,21 @@ public class TelemetryIngestionService : ITelemetryIngestionService
     private readonly TelemetryService _telemetryService;
     private readonly LiveSensorRegistry? _sensorRegistry;
     private readonly Dictionary<string, SensorReading> _previousNumericReadings = new();
+    private readonly TelemetryHistoryService _historyService;
 
     public TelemetryIngestionService(
     SmartXDbContext context,
     TelemetryService telemetryService,
-    LiveSensorRegistry? sensorRegistry)
+    LiveSensorRegistry? sensorRegistry,
+    TelemetryHistoryService historyService)
     {
         _context = context;
         _telemetryService = telemetryService;
         _sensorRegistry = sensorRegistry;
+        _historyService = historyService;
     }
     /// <summary>
-    /// Receives telemetry data from a request, validates it against the registered sensor's telemetry type, processes the telemetry data using the TelemetryService, and returns a TelemetryResponse containing the processed data and status. The method handles different telemetry types (numeric and boolean) and calculates the delta for numeric readings. It throws exceptions for invalid telemetry types or mismatched sensor types.
+    /// Processes incoming telemetry data from sensors. The method takes a TelemetryRequest object as input, which contains the device ID, timestamp, telemetry type, and telemetry value. It first checks if the sensor exists in the LiveSensorRegistry. If the sensor is not found or the telemetry type does not match the registered sensor's telemetry type, it returns null or throws an exception. Depending on the telemetry type, it processes numeric or boolean values accordingly, updating the previous readings and adding the current reading to the TelemetryHistoryService. Finally, it returns a TelemetryResponse object containing the processed data and status.
     /// </summary>
     /// <param name="request"></param>
     /// <returns></returns>
@@ -109,6 +112,8 @@ public class TelemetryIngestionService : ITelemetryIngestionService
                     }
 
                     var currentReading = new SensorReading(request.DeviceId, timestamp, request.TelemetryType, numericValue);
+
+                    _historyService.AddReading(currentReading);
 
                     double? delta = null;
 
