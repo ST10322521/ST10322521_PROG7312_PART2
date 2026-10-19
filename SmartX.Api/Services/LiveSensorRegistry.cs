@@ -14,6 +14,7 @@ public sealed class LiveSensorRegistry
     private readonly Dictionary<string, Sensor> _devicesByDeviceId = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Sensor> _devicesByMac = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _activeErrorStates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DateTime> _lastSeen = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
 
     public LiveSensorRegistry(IServiceScopeFactory scopeFactory)
@@ -92,6 +93,42 @@ public sealed class LiveSensorRegistry
         lock (_lock)
         {
             return _activeErrorStates.ToArray();
+        }
+    }
+    /// <summary>
+    /// Records the timestamp of the last received telemetry data for a specific device. The method uses a lock to ensure thread safety while modifying the internal dictionary that tracks the last seen timestamps for each device. It updates the dictionary with the provided timestamp for the specified deviceId, allowing the registry to keep track of when each device last sent telemetry data.
+    /// </summary>
+    /// <param name="deviceId"></param>
+    /// <param name="timestamp"></param>
+    public void RecordTelemetry(string deviceId, DateTime timestamp)
+    {
+        lock (_lock)
+        {
+            _lastSeen[deviceId] = timestamp;
+        }
+    }
+    /// <summary>
+    /// Retrieves a read-only collection of device IDs that have not sent telemetry data within the specified timeout period. The method uses a lock to ensure thread safety while accessing the internal dictionary that tracks the last seen timestamps for each device. It calculates the current time and compares it with the last seen timestamps to identify devices that have been inactive for longer than the specified timeout. The method also adds a "Disconnected" error state for each disconnected device to the active error states HashSet. Finally, it returns a list of disconnected device IDs.
+    /// </summary>
+    /// <param name="timeout"></param>
+    /// <returns></returns>
+    public IReadOnlyCollection<string> GetDisconnectedDevices(TimeSpan timeout)
+    {
+        var now = DateTime.UtcNow;
+
+        lock (_lock)
+        {
+            var disconnected = _lastSeen
+                .Where(pair => now - pair.Value > timeout)
+                .Select(pair => pair.Key)
+                .ToList();
+
+            foreach (var deviceId in disconnected)
+            {
+                _activeErrorStates.Add($"{deviceId}:Disconnected");
+            }
+
+            return disconnected;
         }
     }
     /// <summary>

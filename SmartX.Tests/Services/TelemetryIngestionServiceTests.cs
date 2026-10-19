@@ -42,6 +42,7 @@ public class TelemetryIngestionServiceTests
         services.AddSingleton<LiveSensorRegistry>();
         services.AddSingleton<TelemetryService>();
         services.AddSingleton<TelemetryHistoryService>();
+        services.AddSingleton<TelemetryReadingState>();
 
         var provider = services.BuildServiceProvider();
 
@@ -51,10 +52,10 @@ public class TelemetryIngestionServiceTests
         await registry.RefreshAsync();
 
         var service = new TelemetryIngestionService(
-            provider.GetRequiredService<SmartXDbContext>(),
             provider.GetRequiredService<TelemetryService>(),
             registry,
-            provider.GetRequiredService<TelemetryHistoryService>());
+            provider.GetRequiredService<TelemetryHistoryService>(),
+            provider.GetRequiredService<TelemetryReadingState>());
 
         return (context, service, provider);
     }

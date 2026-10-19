@@ -1,8 +1,5 @@
 @page "/"
 
-@using SmartX.Shared.DTOs
-@using SmartX.Shared.Enums
-
 <PageTitle>Smart-X Dashboard</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-4">Smart-X Live Dashboard</MudText>
@@ -37,6 +34,45 @@
     </MudPaper>
 
 </div>
+
+<MudPaper Class="pa-4 mb-4">
+
+    <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.h6">
+            Active Alerts &amp; Disconnected Devices
+        </MudText>
+
+        <MudChip T="string" Size="Size.Small" Color="@(activeErrorStates.Count > 0 || disconnectedDevices.Count > 0
+                     ? Color.Error
+                     : Color.Success)">
+            @(activeErrorStates.Count + disconnectedDevices.Count) Active
+        </MudChip>
+    </div>
+
+    @if (activeErrorStates.Count == 0 && disconnectedDevices.Count == 0)
+    {
+        <MudAlert Severity="Severity.Success">
+            No active error states or disconnected devices.
+        </MudAlert>
+    }
+    else
+    {
+        @foreach (var errorState in activeErrorStates)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-2">
+                <strong>Active Error:</strong> @errorState
+            </MudAlert>
+        }
+
+        @foreach (var deviceId in disconnectedDevices)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-2">
+                <strong>Disconnected:</strong> @deviceId
+            </MudAlert>
+        }
+    }
+
+</MudPaper>
 
 <MudPaper Class="pa-4 mb-4">
 

@@ -1,9 +1,6 @@
 
 using System.Globalization;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using SmartX.Api.Data;
-using SmartX.Api.Hubs;
 using SmartX.Api.Services.Interfaces;
 using SmartX.Shared.DTOs;
 using SmartX.Shared.Enums;
@@ -13,20 +10,17 @@ namespace SmartX.Api.Services;
 
 public class TelemetryIngestionService : ITelemetryIngestionService
 {
-    private readonly SmartXDbContext _context;
     private readonly TelemetryService _telemetryService;
     private readonly LiveSensorRegistry? _sensorRegistry;
     private readonly TelemetryReadingState _readingState;
     private readonly TelemetryHistoryService _historyService;
 
     public TelemetryIngestionService(
-    SmartXDbContext context,
     TelemetryService telemetryService,
     LiveSensorRegistry? sensorRegistry,
     TelemetryHistoryService historyService
     , TelemetryReadingState readingState)
     {
-        _context = context;
         _telemetryService = telemetryService;
         _sensorRegistry = sensorRegistry;
         _historyService = historyService;
@@ -54,6 +48,8 @@ public class TelemetryIngestionService : ITelemetryIngestionService
         }
 
         var timestamp = request.Timestamp == default ? DateTime.UtcNow : request.Timestamp;
+
+        _sensorRegistry.RecordTelemetry(request.DeviceId, timestamp);
 
         switch (request.TelemetryType)
         {
