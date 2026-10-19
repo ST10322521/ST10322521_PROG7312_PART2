@@ -1,0 +1,83 @@
+@page "/history"
+
+<PageTitle>Telemetry History</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">
+    Telemetry History
+</MudText>
+
+<MudPaper Class="pa-4">
+
+    <div class="d-flex flex-wrap gap-3 mb-4">
+
+        <MudSelect T="string" @bind-Value="selectedDeviceId" Label="Select device" Variant="Variant.Outlined"
+                   Style="min-width:280px;">
+
+            @foreach (var deviceId in deviceIds)
+            {
+                <MudSelectItem Value="@deviceId">
+                    @deviceId
+                </MudSelectItem>
+            }
+
+        </MudSelect>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.History"
+                   Disabled="@string.IsNullOrWhiteSpace(selectedDeviceId)" OnClick="LoadHistoryAsync">
+            Load History
+        </MudButton>
+
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(error))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @error
+        </MudAlert>
+    }
+
+    @if (loading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="mb-4" />
+    }
+
+    @if (!loading && history.Count == 0 && !string.IsNullOrWhiteSpace(selectedDeviceId))
+    {
+        <MudAlert Severity="Severity.Info">
+            No historical telemetry is available for this device yet.
+        </MudAlert>
+    }
+
+    @if (history.Count > 0)
+    {
+        <MudTable Items="history" Hover="true" Dense="true" Striped="true">
+
+            <HeaderContent>
+                <MudTh>Timestamp</MudTh>
+                <MudTh>Device</MudTh>
+                <MudTh>Telemetry Type</MudTh>
+                <MudTh>Value</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+                <MudTd DataLabel="Timestamp">
+                    @context.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                </MudTd>
+
+                <MudTd DataLabel="Device">
+                    @context.DeviceId
+                </MudTd>
+
+                <MudTd DataLabel="Telemetry Type">
+                    @context.TelemetryType
+                </MudTd>
+
+                <MudTd DataLabel="Value">
+                    @context.Value.ToString("0.##")
+                </MudTd>
+            </RowTemplate>
+
+        </MudTable>
+    }
+
+</MudPaper>
