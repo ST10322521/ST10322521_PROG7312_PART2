@@ -181,7 +181,12 @@ public class TelemetryIngestionService : ITelemetryIngestionService
                     "Unsupported telemetry type.");
         }
     }
-
+    /// <summary>
+    /// Tries to convert the provided value to a numeric double value. The method attempts to parse the input object as a string and convert it to a double using invariant culture formatting. It returns true if the conversion is successful and the resulting value is finite; otherwise, it returns false. This method is used to validate and process numeric telemetry values received from sensors.
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="numericValue"></param>
+    /// <returns></returns>
     private static bool TryConvertNumericValue(
         object? value,
         out double numericValue)
@@ -193,7 +198,12 @@ public class TelemetryIngestionService : ITelemetryIngestionService
                    out numericValue)
                && double.IsFinite(numericValue);
     }
-
+    /// <summary>
+    /// Tries to convert the provided value to a boolean value. The method attempts to parse the input object as a string and convert it to a boolean. It returns true if the conversion is successful; otherwise, it returns false. This method is used to validate and process boolean telemetry values received from sensors.
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="booleanValue"></param>
+    /// <returns></returns>
     private static bool TryConvertBooleanValue(
         object? value,
         out bool booleanValue)

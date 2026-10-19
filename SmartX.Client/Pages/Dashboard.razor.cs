@@ -44,7 +44,10 @@ public partial class Dashboard : IDisposable
             error = $"Unable to load dashboard sensors: {ex.Message}";
         }
     }
-
+    /// <summary>
+    /// Handles incoming telemetry data received from the SignalR service. The method updates the latest telemetry readings for each device, increments the anomaly count if the telemetry status is not normal, and maintains a list of recent anomalies. It also checks the connection state of the SignalR service and triggers a UI update by invoking StateHasChanged asynchronously.
+    /// </summary>
+    /// <param name="telemetry"></param>
     private void HandleTelemetry(TelemetryResponse telemetry)
     {
 
@@ -71,7 +74,11 @@ public partial class Dashboard : IDisposable
 
         InvokeAsync(StateHasChanged);
     }
-
+    /// <summary>
+    /// Gets the color associated with a specific telemetry status. The method maps different telemetry statuses (Normal, Warning, Critical) to corresponding MudBlazor color values (Success, Warning, Error). If the status is not recognized, it defaults to the default color. This is used to visually represent the status of telemetry readings in the UI.
+    /// </summary>
+    /// <param name="status"></param>
+    /// <returns></returns>
     private static Color GetStatusColor(TelemetryStatus status)
     {
         return status switch
@@ -82,7 +89,9 @@ public partial class Dashboard : IDisposable
             _ => Color.Default
         };
     }
-
+    /// <summary>
+    /// Disposes of the Dashboard component by unsubscribing from the TelemetryReceived event of the SignalR service. This ensures that when the component is no longer in use, it stops receiving telemetry updates, preventing potential memory leaks or unintended behavior.
+    /// </summary>
     public void Dispose()
     {
         SignalRService.TelemetryReceived -= HandleTelemetry;

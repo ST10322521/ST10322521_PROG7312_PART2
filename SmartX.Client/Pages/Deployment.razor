@@ -1,0 +1,74 @@
+@page "/deployment"
+@using System.Net.Http.Json
+@using SmartX.Shared.Models
+@inject HttpClient Http
+
+<PageTitle>Deployment Validation</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Deployment Validation</MudText>
+
+<MudPaper Class="pa-4 mb-4">
+
+    <MudText Typo="Typo.h6">Root Deployment Node</MudText>
+
+    <MudTextField @bind-Value="root.Name" Label="Root Name" Variant="Variant.Outlined" Class="mb-3" />
+
+    <MudTextField @bind-Value="root.NodeType" Label="Root Node Type" Variant="Variant.Outlined" Class="mb-3" />
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ValidateDeployment">
+        Validate Deployment
+    </MudButton>
+
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4">
+
+    <MudText Typo="Typo.h6" Class="mb-3">Child Nodes</MudText>
+
+    @foreach (var child in root.Children)
+    {
+        <MudPaper Outlined="true" Class="pa-3 mb-3">
+
+            <MudTextField @bind-Value="child.Name" Label="Child Name" Variant="Variant.Outlined" Class="mb-2" />
+
+            <MudTextField @bind-Value="child.NodeType" Label="Child Node Type" Variant="Variant.Outlined" Class="mb-2" />
+
+            <MudButton Color="Color.Error" Variant="Variant.Text" OnClick="@(() => RemoveChild(child))">
+                Remove
+            </MudButton>
+
+        </MudPaper>
+    }
+
+    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="AddChild">
+        Add Child Node
+    </MudButton>
+
+</MudPaper>
+
+@if (!string.IsNullOrWhiteSpace(resultMessage))
+{
+    <MudAlert Severity="@resultSeverity" Class="mb-4">
+        @resultMessage
+    </MudAlert>
+}
+
+@if (validationErrors.Count > 0)
+{
+    <MudPaper Class="pa-4">
+
+        <MudText Typo="Typo.h6" Class="mb-2">
+            Validation Errors
+        </MudText>
+
+        <MudList T="string" Dense="true">
+            @foreach (var validationError in validationErrors)
+            {
+                <MudListItem T="string">
+                    @validationError
+                </MudListItem>
+            }
+        </MudList>
+
+    </MudPaper>
+}
