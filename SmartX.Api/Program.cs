@@ -19,7 +19,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("SmartXClient", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5269")
+            .WithOrigins(
+                "http://localhost:5269",
+                "http://localhost:8080")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -72,6 +74,12 @@ app.UseHttpsRedirection();
 app.UseCors("SmartXClient");
 
 app.MapControllers();
+
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "Healthy"
+}));
+
 app.MapHub<SmartXHub>("/smartxHub");
 
 app.Run();

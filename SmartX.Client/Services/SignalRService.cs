@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.SignalR.Client;
 using SmartX.Shared.DTOs;
 
@@ -12,10 +13,14 @@ public sealed class SignalRService : IAsyncDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="SignalRService"/> class and sets up the SignalR connection with automatic reconnection and event handlers for connection state changes.
     /// </summary>
-    public SignalRService()
+    public SignalRService(IWebAssemblyHostEnvironment environment)
     {
+        var hubUrl = environment.Environment == "Development"
+        ? new Uri("http://localhost:5017/smartxHub")
+        : new Uri(new Uri(environment.BaseAddress), "smartxHub");
+
         _connection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5017/smartxHub")
+            .WithUrl(hubUrl)
             .WithAutomaticReconnect()
             .Build();
 

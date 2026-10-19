@@ -13,9 +13,11 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddMudServices();
 
+var apiBaseAddress = builder.HostEnvironment.Environment == "Development" ? "http://localhost:5017/" : builder.HostEnvironment.BaseAddress;
+
 builder.Services.AddScoped(sp => new HttpClient
 {
-    BaseAddress = new Uri("http://localhost:5017/")
+    BaseAddress = new Uri(apiBaseAddress)
 });
 
 builder.Services.AddScoped<SignalRService>();

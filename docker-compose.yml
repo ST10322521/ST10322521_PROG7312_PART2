@@ -8,8 +8,15 @@ services:
       - "5017:8080"
     environment:
       - ConnectionStrings__SmartXDatabase=Data Source=/app/data/smartx.db
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     volumes:
       - smartx-api-data:/app/data
+      - smartx-api-attachments:/app/Storage/Attachments
     networks:
       - smartx-network
 
@@ -21,7 +28,8 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - smartx-network
 
@@ -31,12 +39,16 @@ services:
       dockerfile: SmartX.SensorSimulator/Dockerfile
     container_name: smartx-simulator
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    environment:
+      - SMARTX_API_URL=http://api:8080
     networks:
       - smartx-network
 
 volumes:
   smartx-api-data:
+  smartx-api-attachments:
 
 networks:
   smartx-network:

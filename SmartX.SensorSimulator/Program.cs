@@ -15,7 +15,7 @@ namespace SmartX.SensorSimulator;
 
 public static class Program
 {
-    private const string ApiBaseUrl = "http://localhost:5017";
+    private static readonly string ApiBaseUrl = Environment.GetEnvironmentVariable("SMARTX_API_URL") ?? "http://localhost:5017";
 
     public static async Task Main()
     {
@@ -396,7 +396,7 @@ public static class Program
             }
         }
         /// <summary>
-        /// Runs the telemetry generation and sending loop for the device. The method continuously generates telemetry data based on the device's configuration and sends it to the API until the provided cancellation token is triggered. It handles anomalies, logs the results of telemetry sends, and manages delays between telemetry transmissions based on the configured sampling interval.
+        /// Runs the telemetry generation and sending loop for the device. The method continuously generates telemetry data based on the device's configuration and sends it to the API. It simulates various anomalies (e.g., spikes, drops, invalid values) based on a predefined cycle. The loop continues until the provided cancellation token is triggered, at which point it exits gracefully.
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
@@ -417,6 +417,34 @@ public static class Program
                 else
                 {
                     var telemetry = CreateTelemetry(anomaly);
+
+                    if (telemetry.Value is float numericValue)
+                    {
+                        if (_telemetryCycle % 2 == 0)
+                        {
+                            var batch = new TelemetryBatch(1, 1);
+                            batch.SetRectangularValue(0, 0, numericValue);
+
+                            var reading = batch.ToReadings(
+                                [DeviceId],
+                                telemetry.TelemetryType,
+                                telemetry.Timestamp)[0];
+
+                            telemetry.Value = (float)reading.Value;
+                        }
+                        else
+                        {
+                            var batch = new TelemetryBatch([1]);
+                            batch.SetJaggedValue(0, 0, numericValue);
+
+                            var reading = batch.ToReadings(
+                                [DeviceId],
+                                telemetry.TelemetryType,
+                                telemetry.Timestamp)[0];
+
+                            telemetry.Value = (float)reading.Value;
+                        }
+                    }
 
                     try
                     {
