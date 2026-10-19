@@ -13,6 +13,7 @@ The project intentionally does **not** implement **Network Topology and Mesh Rou
 
 ## Demonstration Video
 YouTube: https://youtu.be/OtAjBqLiV2E
+[![SmartX Part 2 Demo](https://img.youtube.com/vi/OtAjBqLiV2E/maxresdefault.jpg)](https://www.youtube.com/embed/OtAjBqLiV2E)
 
 ---
 
