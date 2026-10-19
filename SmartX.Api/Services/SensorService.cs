@@ -13,10 +13,12 @@ namespace SmartX.Api.Services;
 public class SensorService : ISensorService
 {
     private readonly SmartXDbContext _context;
+    private readonly LiveSensorRegistry _sensorRegistry;
 
-    public SensorService(SmartXDbContext context)
+    public SensorService(SmartXDbContext context, LiveSensorRegistry sensorRegistry)
     {
         _context = context;
+        _sensorRegistry = sensorRegistry;
     }
     /// <summary>
     /// Retrieves all sensors from the database.
@@ -78,6 +80,8 @@ public class SensorService : ISensorService
         _context.Sensors.Add(sensor);
         await _context.SaveChangesAsync();
 
+        await _sensorRegistry.RefreshAsync();
+
         return new(ServiceStatus.Success, Data: sensor);
     }
     /// <summary>
@@ -128,6 +132,8 @@ public class SensorService : ISensorService
 
         await _context.SaveChangesAsync();
 
+        await _sensorRegistry.RefreshAsync();
+
         return new(ServiceStatus.Success, Data: sensor);
     }
     /// <summary>
@@ -150,6 +156,8 @@ public class SensorService : ISensorService
         _context.Sensors.Remove(sensor);
         await _context.SaveChangesAsync();
 
+        await _sensorRegistry.RefreshAsync();
+
         return true;
     }
 
@@ -163,6 +171,8 @@ public class SensorService : ISensorService
 
         sensor.IsActive = isActive;
         await _context.SaveChangesAsync();
+
+        await _sensorRegistry.RefreshAsync();
 
         return new(ServiceStatus.Success, Data: sensor);
     }

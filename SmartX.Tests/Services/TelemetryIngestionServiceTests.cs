@@ -1,41 +1,67 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using SmartX.Api.Data;
 using SmartX.Api.Services;
 using SmartX.Shared.DTOs;
 using SmartX.Shared.Enums;
 using SmartX.Shared.Models;
-using Microsoft.AspNetCore.SignalR;
-using SmartX.Api.Hubs;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace SmartX.Tests.Services;
 
 public class TelemetryIngestionServiceTests
 {
-    private static SmartXDbContext CreateContext()
+    private static DbContextOptions<SmartXDbContext> CreateOptions()
     {
-        var options = new DbContextOptionsBuilder<SmartXDbContext>()
+        return new DbContextOptionsBuilder<SmartXDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-
-        return new SmartXDbContext(options);
     }
 
-    private static IHubContext<SmartXHub> CreateHubContext()
+    private static async Task<(
+        SmartXDbContext Context,
+        TelemetryIngestionService Service,
+        ServiceProvider Provider)> CreateServiceAsync(
+        Sensor? sensor = null)
     {
+        var options = CreateOptions();
+
+        var context = new SmartXDbContext(options);
+
+        if (sensor is not null)
+        {
+            context.Sensors.Add(sensor);
+            await context.SaveChangesAsync();
+        }
+
         var services = new ServiceCollection();
+
         services.AddLogging();
-        services.AddSignalR();
-        var serviceProvider = services.BuildServiceProvider();
-        return serviceProvider.GetRequiredService<IHubContext<SmartXHub>>();
+
+        services.AddScoped<SmartXDbContext>(_ =>
+            new SmartXDbContext(options));
+
+        services.AddSingleton<LiveSensorRegistry>();
+        services.AddSingleton<TelemetryService>();
+
+        var provider = services.BuildServiceProvider();
+
+        var registry =
+            provider.GetRequiredService<LiveSensorRegistry>();
+
+        await registry.RefreshAsync();
+
+        var service = new TelemetryIngestionService(
+            provider.GetRequiredService<SmartXDbContext>(),
+            provider.GetRequiredService<TelemetryService>(),
+            registry);
+
+        return (context, service, provider);
     }
 
     [Fact]
     public async Task ReceiveTelemetry_PowerIntegerValue_ReturnsNormal()
     {
-        await using var context = CreateContext();
-
-        context.Sensors.Add(new Sensor
+        var sensor = new Sensor
         {
             Id = Guid.NewGuid(),
             DeviceId = "TEST-POWER-001",
@@ -47,13 +73,10 @@ public class TelemetryIngestionServiceTests
             NormalMin = 500,
             NormalMax = 2000,
             IsActive = true
-        });
+        };
 
-        await context.SaveChangesAsync();
-
-        var service = new TelemetryIngestionService(
-            context,
-            new TelemetryService());
+        var (context, service, provider) =
+            await CreateServiceAsync(sensor);
 
         var request = new TelemetryRequest
         {
@@ -62,21 +85,23 @@ public class TelemetryIngestionServiceTests
             Value = 1450
         };
 
-        var result = await service.ReceiveTelemetryAsync(request);
+        var result =
+            await service.ReceiveTelemetryAsync(request);
 
         Assert.NotNull(result);
         Assert.Equal("TEST-POWER-001", result.DeviceId);
         Assert.Equal(TelemetryType.Power, result.TelemetryType);
         Assert.Equal(1450d, result.Value);
         Assert.Equal(TelemetryStatus.Normal, result.Status);
+
+        await provider.DisposeAsync();
+        await context.DisposeAsync();
     }
 
     [Fact]
     public async Task ReceiveTelemetry_RelayBooleanValue_ReturnsNormal()
     {
-        await using var context = CreateContext();
-
-        context.Sensors.Add(new Sensor
+        var sensor = new Sensor
         {
             Id = Guid.NewGuid(),
             DeviceId = "TEST-RELAY-001",
@@ -88,13 +113,10 @@ public class TelemetryIngestionServiceTests
             NormalMin = 0,
             NormalMax = 0,
             IsActive = true
-        });
+        };
 
-        await context.SaveChangesAsync();
-
-        var service = new TelemetryIngestionService(
-            context,
-            new TelemetryService());
+        var (context, service, provider) =
+            await CreateServiceAsync(sensor);
 
         var request = new TelemetryRequest
         {
@@ -103,21 +125,23 @@ public class TelemetryIngestionServiceTests
             Value = true
         };
 
-        var result = await service.ReceiveTelemetryAsync(request);
+        var result =
+            await service.ReceiveTelemetryAsync(request);
 
         Assert.NotNull(result);
         Assert.Equal("TEST-RELAY-001", result.DeviceId);
         Assert.Equal(TelemetryType.RelayState, result.TelemetryType);
         Assert.Equal(true, result.Value);
         Assert.Equal(TelemetryStatus.Normal, result.Status);
+
+        await provider.DisposeAsync();
+        await context.DisposeAsync();
     }
 
     [Fact]
     public async Task ReceiveTelemetry_WrongTelemetryType_ThrowsInvalidOperationException()
     {
-        await using var context = CreateContext();
-
-        context.Sensors.Add(new Sensor
+        var sensor = new Sensor
         {
             Id = Guid.NewGuid(),
             DeviceId = "TEST-POWER-002",
@@ -129,13 +153,10 @@ public class TelemetryIngestionServiceTests
             NormalMin = 500,
             NormalMax = 2000,
             IsActive = true
-        });
+        };
 
-        await context.SaveChangesAsync();
-
-        var service = new TelemetryIngestionService(
-            context,
-            new TelemetryService());
+        var (context, service, provider) =
+            await CreateServiceAsync(sensor);
 
         var request = new TelemetryRequest
         {
@@ -144,20 +165,22 @@ public class TelemetryIngestionServiceTests
             Value = 25
         };
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.ReceiveTelemetryAsync(request));
+        var exception =
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => service.ReceiveTelemetryAsync(request));
 
         Assert.Equal(
             "The provided telemetry type does not match the registered sensor's telemetry type.",
             exception.Message);
+
+        await provider.DisposeAsync();
+        await context.DisposeAsync();
     }
 
     [Fact]
     public async Task ReceiveTelemetry_InvalidNumericValue_ThrowsArgumentException()
     {
-        await using var context = CreateContext();
-
-        context.Sensors.Add(new Sensor
+        var sensor = new Sensor
         {
             Id = Guid.NewGuid(),
             DeviceId = "TEST-POWER-003",
@@ -169,13 +192,10 @@ public class TelemetryIngestionServiceTests
             NormalMin = 500,
             NormalMax = 2000,
             IsActive = true
-        });
+        };
 
-        await context.SaveChangesAsync();
-
-        var service = new TelemetryIngestionService(
-            context,
-            new TelemetryService());
+        var (context, service, provider) =
+            await CreateServiceAsync(sensor);
 
         var request = new TelemetryRequest
         {
@@ -184,22 +204,23 @@ public class TelemetryIngestionServiceTests
             Value = "not-a-number"
         };
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => service.ReceiveTelemetryAsync(request));
+        var exception =
+            await Assert.ThrowsAsync<ArgumentException>(
+                () => service.ReceiveTelemetryAsync(request));
 
         Assert.Equal(
             "Telemetry value must be numeric.",
             exception.Message);
+
+        await provider.DisposeAsync();
+        await context.DisposeAsync();
     }
 
     [Fact]
     public async Task ReceiveTelemetry_UnknownDevice_ReturnsNull()
     {
-        await using var context = CreateContext();
-
-        var service = new TelemetryIngestionService(
-            context,
-            new TelemetryService());
+        var (context, service, provider) =
+            await CreateServiceAsync();
 
         var request = new TelemetryRequest
         {
@@ -208,8 +229,12 @@ public class TelemetryIngestionServiceTests
             Value = 25
         };
 
-        var result = await service.ReceiveTelemetryAsync(request);
+        var result =
+            await service.ReceiveTelemetryAsync(request);
 
         Assert.Null(result);
+
+        await provider.DisposeAsync();
+        await context.DisposeAsync();
     }
 }

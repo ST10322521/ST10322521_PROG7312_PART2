@@ -33,12 +33,14 @@ public sealed class TelemetryQueueProcessor : BackgroundService
         _sensorRegistry = sensorRegistry;
     }
     /// <summary>
-    /// Executes the telemetry queue processing in a background service. The method continuously dequeues telemetry requests from the TelemetryQueueService and processes them using the ITelemetryIngestionService. If the telemetry response indicates a critical status, it is enqueued into a priority queue for critical alerts. The method also handles exceptions and logs relevant information. The processing continues until the service is stopped or canceled.
+    /// Executes the background service that processes telemetry data from a queue. The method continuously dequeues telemetry requests, processes them using the ITelemetryIngestionService, and handles critical telemetry responses by enqueuing them for further processing. It also publishes telemetry responses to connected clients via SignalR. The method runs until the cancellation token is triggered, at which point it gracefully stops processing.  
     /// </summary>
     /// <param name="stoppingToken"></param>
     /// <returns></returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await _sensorRegistry.RefreshAsync();
+
         _logger.LogInformation("Smart-X telemetry FIFO processor started.");
 
         while (!stoppingToken.IsCancellationRequested)

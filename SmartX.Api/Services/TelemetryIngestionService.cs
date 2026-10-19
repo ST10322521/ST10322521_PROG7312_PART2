@@ -15,17 +15,20 @@ public class TelemetryIngestionService : ITelemetryIngestionService
 {
     private readonly SmartXDbContext _context;
     private readonly TelemetryService _telemetryService;
+    private readonly LiveSensorRegistry? _sensorRegistry;
     private readonly Dictionary<string, SensorReading> _previousNumericReadings = new();
 
     public TelemetryIngestionService(
     SmartXDbContext context,
-    TelemetryService telemetryService)
+    TelemetryService telemetryService,
+    LiveSensorRegistry? sensorRegistry)
     {
         _context = context;
         _telemetryService = telemetryService;
+        _sensorRegistry = sensorRegistry;
     }
     /// <summary>
-    /// Receives telemetry data asynchronously. The method takes a TelemetryRequest object as input, which contains the device ID, timestamp, telemetry type, and value. It first checks if the sensor associated with the device ID exists in the database. If the sensor is found, it validates that the telemetry type matches the registered sensor's telemetry type. Depending on the telemetry type, it processes numeric or boolean values accordingly, calculates any delta from previous readings, and constructs a TelemetryResponse object. The response is then sent to all connected clients via SignalR. If any validation fails or if the sensor does not exist, appropriate exceptions are thrown or null is returned.  
+    /// Receives telemetry data from a request, validates it against the registered sensor's telemetry type, processes the telemetry data using the TelemetryService, and returns a TelemetryResponse containing the processed data and status. The method handles different telemetry types (numeric and boolean) and calculates the delta for numeric readings. It throws exceptions for invalid telemetry types or mismatched sensor types.
     /// </summary>
     /// <param name="request"></param>
     /// <returns></returns>
@@ -33,9 +36,8 @@ public class TelemetryIngestionService : ITelemetryIngestionService
     /// <exception cref="ArgumentException"></exception>
     public async Task<TelemetryResponse?> ReceiveTelemetryAsync(TelemetryRequest request)
     {
-        // Check if the sensor exists
-        var sensor = await _context.Sensors.AsNoTracking().FirstOrDefaultAsync(s => s.DeviceId == request.DeviceId);
-        if (sensor is null)
+        // Check if the sensor exists in the registry
+        if (_sensorRegistry is null || !_sensorRegistry.TryGetByDeviceId(request.DeviceId, out var sensor) || sensor is null)
         {
             return null;
         }
