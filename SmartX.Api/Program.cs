@@ -37,6 +37,7 @@ builder.Services.AddSingleton<TelemetryQueueService>();
 builder.Services.AddHostedService<TelemetryQueueProcessor>();
 builder.Services.AddScoped<ISensorService, SensorService>();
 builder.Services.AddScoped<ISensorAttachmentService, SensorAttachmentService>();
+builder.Services.AddSingleton<LiveSensorRegistry>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

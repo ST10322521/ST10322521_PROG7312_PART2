@@ -17,17 +17,20 @@ public sealed class TelemetryQueueProcessor : BackgroundService
     private readonly PriorityQueue<TelemetryResponse, int> _criticalQueue = new();
 
     private readonly object _criticalQueueLock = new();
+    private readonly LiveSensorRegistry _sensorRegistry;
 
     public TelemetryQueueProcessor(
         TelemetryQueueService queue,
         IServiceScopeFactory scopeFactory,
         IHubContext<SmartXHub> hubContext,
-        ILogger<TelemetryQueueProcessor> logger)
+        ILogger<TelemetryQueueProcessor> logger,
+        LiveSensorRegistry sensorRegistry)
     {
         _queue = queue;
         _scopeFactory = scopeFactory;
         _hubContext = hubContext;
         _logger = logger;
+        _sensorRegistry = sensorRegistry;
     }
     /// <summary>
     /// Executes the telemetry queue processing in a background service. The method continuously dequeues telemetry requests from the TelemetryQueueService and processes them using the ITelemetryIngestionService. If the telemetry response indicates a critical status, it is enqueued into a priority queue for critical alerts. The method also handles exceptions and logs relevant information. The processing continues until the service is stopped or canceled.
