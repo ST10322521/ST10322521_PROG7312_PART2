@@ -8,7 +8,9 @@ public sealed class RecommendationService
     private readonly LiveSensorRegistry _sensorRegistry;
     private readonly TelemetryHistoryService _historyService;
 
-    private readonly List<UserInteraction> _interactions = [];
+    private readonly Queue<UserInteraction> _interactionHistory = new();
+    private readonly Dictionary<string, int> _searchFrequency = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _processedAlertIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
 
     public RecommendationService(
@@ -19,35 +21,43 @@ public sealed class RecommendationService
         _historyService = historyService;
     }
     /// <summary>
-    /// Records a user interaction with the system. This method is thread-safe and ensures that the list of interactions does not exceed 500 entries. If the list exceeds this limit, the oldest entry is removed. The method takes a UserInteraction object as a parameter, which contains details about the action performed by the user, such as the action type, query, device ID, command, and timestamp.
+    /// Records a user interaction, such as a search or inspection action, and maintains a history of the most recent 500 interactions. The method is thread-safe and locks the internal queue to ensure that no other thread can modify it while the interaction is being recorded. If the queue exceeds 500 entries, the oldest entry is removed to maintain the size limit.
     /// </summary>
     /// <param name="interaction"></param>
     public void RecordInteraction(UserInteraction interaction)
     {
         lock (_lock)
         {
-            _interactions.Add(interaction);
+            _interactionHistory.Enqueue(interaction);
+
+            // Update search frequency for "Search" actions
+            if (interaction.Action.Equals("Search", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(interaction.DeviceId))
+            {
+                _searchFrequency[interaction.DeviceId] =
+                    _searchFrequency.GetValueOrDefault(interaction.DeviceId) + 1;
+            }
 
             // Ensure the list does not exceed 500 entries
-            if (_interactions.Count > 500)
+            if (_interactionHistory.Count > 500)
             {
-                _interactions.RemoveAt(0);
+                _interactionHistory.Dequeue();
             }
         }
     }
     /// <summary>
-    /// Retrieves a list of user interactions, ordered by timestamp in descending order. The method is thread-safe and returns a read-only list of UserInteraction objects. It locks the internal list of interactions to ensure that no other thread can modify it while the data is being retrieved. The returned list contains the most recent interactions first, allowing for easy access to the latest user actions.
+    /// Retrieves a read-only list of user interactions, ordered by timestamp in descending order. The method is thread-safe and locks the internal queue to ensure that no other thread can modify it while the list is being generated. It returns a copy of the interaction history as a list, allowing external code to access the data without modifying the original queue.
     /// </summary>
     /// <returns></returns>
     public IReadOnlyList<UserInteraction> GetInteractions()
     {
         lock (_lock)
         {
-            return _interactions.OrderByDescending(x => x.Timestamp).ToList();
+            return _interactionHistory.OrderByDescending(x => x.Timestamp).ToList();
         }
     }
     /// <summary>
-    /// Retrieves the count of "Search" actions performed by the user for a specific device. The method is thread-safe and locks the internal list of interactions to ensure that no other thread can modify it while the count is being calculated. It filters the interactions to include only those that match the specified device ID and have an action type of "Search", then returns the total count of such interactions.
+    /// Retrieves the count of "Search" actions performed by the user for a specific device. The method is thread-safe and locks the internal queue to ensure that no other thread can modify it while the count is being calculated. It filters the interactions to include only those that match the specified device ID and have an action type of "Search", then returns the total count of such interactions.
     /// </summary>
     /// <param name="deviceId"></param>
     /// <returns></returns>
@@ -55,7 +65,7 @@ public sealed class RecommendationService
     {
         lock (_lock)
         {
-            return _interactions.Count(x =>
+            return _interactionHistory.Count(x =>
                 string.Equals(x.DeviceId, deviceId, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(x.Action, "Search", StringComparison.OrdinalIgnoreCase));
         }
@@ -95,11 +105,13 @@ public sealed class RecommendationService
         return recommendations;
     }
     /// <summary>
-    /// Generates a list of recommendations based on the current state of devices and user interactions. The method checks for active error states in the sensor registry and creates recommendations for devices that are in a "Critical" or "Disconnected" state. It also analyzes user interactions to identify devices that have been frequently searched while having an active problem, generating additional recommendations for those devices. The final list of recommendations is grouped to remove duplicates and returned as a read-only list.
+    /// Asynchronously generates a list of recommendations based on the current state of devices and user interactions. The method checks for active error states in the sensor registry and creates recommendations for devices that are in a "Critical" or "Disconnected" state. It also analyzes user interactions to identify devices that have been frequently searched while having an active problem, generating additional recommendations for those devices. The final list of recommendations is grouped to remove duplicates and returned as a read-only list.
     /// </summary>
     /// <returns></returns>
-    public IReadOnlyList<Recommendation> GetRecommendations()
+    public async Task<IReadOnlyList<Recommendation>> GetRecommendationsAsync()
     {
+        await Task.Yield();
+
         var recommendations = new List<Recommendation>();
 
         var activeErrors = _sensorRegistry.GetActiveErrorStates();
@@ -113,6 +125,18 @@ public sealed class RecommendationService
             var deviceId = errorState[..separatorIndex];
             var state = errorState[(separatorIndex + 1)..];
 
+            var alertId = $"{deviceId}:{state}";
+
+            // Ensure that each alert is processed only once to avoid duplicate recommendations
+            lock (_lock)
+            {
+                if (!_processedAlertIds.Add(alertId))
+                {
+                    continue;
+                }
+            }
+
+            // Generate recommendations based on the state of the device
             if (state.Equals("Critical", StringComparison.OrdinalIgnoreCase))
             {
                 recommendations.Add(new Recommendation(
@@ -133,17 +157,16 @@ public sealed class RecommendationService
             }
         }
 
-        foreach (var interaction in GetInteractions()
-                     .Where(x => x.Action.Equals("Search", StringComparison.OrdinalIgnoreCase))
-                     .Where(x => !string.IsNullOrWhiteSpace(x.DeviceId))
-                     .GroupBy(x => x.DeviceId!, StringComparer.OrdinalIgnoreCase))
+        // Analyze user interactions for frequently searched devices with active problems
+        foreach (var frequency in GetSearchFrequencies())
         {
-            var deviceId = interaction.Key;
-            var searchCount = interaction.Count();
+            var deviceId = frequency.Key;
+            var searchCount = frequency.Value;
 
             if (searchCount < 2) continue;
 
-            var hasActiveProblem = activeErrors.Any(error => error.StartsWith($"{deviceId}:", StringComparison.OrdinalIgnoreCase));
+            var hasActiveProblem = activeErrors.Any(error =>
+                error.StartsWith($"{deviceId}:", StringComparison.OrdinalIgnoreCase));
 
             if (!hasActiveProblem) continue;
 
@@ -163,5 +186,17 @@ public sealed class RecommendationService
                 StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToList();
+    }
+
+    /// <summary>
+    /// Retrieves a read-only dictionary of search frequencies for devices, indicating how many times each device has been searched by the user. The method is thread-safe and locks the internal dictionary to ensure that no other thread can modify it while the dictionary is being generated. It returns a copy of the search frequency dictionary, allowing external code to access the data without modifying the original dictionary.
+    /// </summary>
+    /// <returns></returns>
+    private IReadOnlyDictionary<string, int> GetSearchFrequencies()
+    {
+        lock (_lock)
+        {
+            return new Dictionary<string, int>(_searchFrequency, StringComparer.OrdinalIgnoreCase);
+        }
     }
 }

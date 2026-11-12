@@ -16,13 +16,13 @@ public class RecommendationsController : ControllerBase
         _recommendationService = recommendationService;
     }
     /// <summary>
-    /// Retrieves a list of recommendations based on the current state of devices and user interactions. The method calls the GetRecommendations method of the RecommendationService to generate the recommendations, which may include suggestions for devices that are in a "Critical" or "Disconnected" state, as well as devices that have been frequently searched while having an active problem. The recommendations are returned as an HTTP 200 OK response with the list of recommendations in the response body.
+    /// Retrieves a list of recommendations based on the current state of devices and user interactions. The method calls the GetRecommendationsAsync method of the RecommendationService to generate the recommendations, which may include suggestions for devices that are in a "Critical" or "Disconnected" state, as well as devices that have been frequently searched while having an active problem. The recommendations are returned as an HTTP 200 OK response with the list of recommendations in the response body.
     /// </summary>
     /// <returns></returns>
     [HttpGet]
-    public IActionResult GetRecommendations()
+    public async Task<IActionResult> GetRecommendations()
     {
-        var recommendations = _recommendationService.GetRecommendations();
+        var recommendations = await _recommendationService.GetRecommendationsAsync();
 
         return Ok(recommendations);
     }
