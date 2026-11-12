@@ -23,6 +23,7 @@ builder.Services.AddScoped(sp => new HttpClient
 builder.Services.AddScoped<SignalRService>();
 builder.Services.AddScoped<SensorService>();
 builder.Services.AddScoped<SensorAttachmentService>();
+builder.Services.AddSingleton<AppStateService>();
 
 var app = builder.Build();
 

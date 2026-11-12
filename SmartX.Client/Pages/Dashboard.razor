@@ -20,17 +20,17 @@
 
     <MudPaper Class="pa-4" Style="min-width:180px;">
         <MudText Typo="Typo.caption">Active Sensors</MudText>
-        <MudText Typo="Typo.h4">@latestTelemetry.Count</MudText>
+        <MudText Typo="Typo.h4">@AppState.LatestTelemetry.Count</MudText>
     </MudPaper>
 
     <MudPaper Class="pa-4" Style="min-width:180px;">
         <MudText Typo="Typo.caption">Live Readings</MudText>
-        <MudText Typo="Typo.h4">@latestTelemetry.Count</MudText>
+        <MudText Typo="Typo.h4">@AppState.LatestTelemetry.Count</MudText>
     </MudPaper>
 
     <MudPaper Class="pa-4" Style="min-width:180px;">
         <MudText Typo="Typo.caption">Anomalies</MudText>
-        <MudText Typo="Typo.h4">@anomalyCount</MudText>
+        <MudText Typo="Typo.h4">@AppState.AnomalyCount</MudText>
     </MudPaper>
 
 </div>
@@ -42,14 +42,14 @@
             Active Alerts &amp; Disconnected Devices
         </MudText>
 
-        <MudChip T="string" Size="Size.Small" Color="@(activeErrorStates.Count > 0 || disconnectedDevices.Count > 0
+        <MudChip T="string" Size="Size.Small" Color="@(AppState.ActiveErrorStates.Count > 0 || AppState.DisconnectedDevices.Count > 0
                      ? Color.Error
                      : Color.Success)">
-            @(activeErrorStates.Count + disconnectedDevices.Count) Active
+            @(AppState.ActiveErrorStates.Count + AppState.DisconnectedDevices.Count) Active
         </MudChip>
     </div>
 
-    @if (activeErrorStates.Count == 0 && disconnectedDevices.Count == 0)
+    @if (AppState.ActiveErrorStates.Count == 0 && AppState.DisconnectedDevices.Count == 0)
     {
         <MudAlert Severity="Severity.Success">
             No active error states or disconnected devices.
@@ -57,14 +57,14 @@
     }
     else
     {
-        @foreach (var errorState in activeErrorStates)
+        @foreach (var errorState in AppState.ActiveErrorStates)
         {
             <MudAlert Severity="Severity.Error" Class="mb-2">
                 <strong>Active Error:</strong> @errorState
             </MudAlert>
         }
 
-        @foreach (var deviceId in disconnectedDevices)
+        @foreach (var deviceId in AppState.DisconnectedDevices)
         {
             <MudAlert Severity="Severity.Warning" Class="mb-2">
                 <strong>Disconnected:</strong> @deviceId
@@ -81,14 +81,14 @@
             Suggested Actions
         </MudText>
 
-        <MudChip T="string" Size="Size.Small" Color="@(recommendations.Count > 0
+        <MudChip T="string" Size="Size.Small" Color="@(AppState.Recommendations.Count > 0
                      ? Color.Warning
                      : Color.Success)">
-            @recommendations.Count Suggested
+            @AppState.Recommendations.Count Suggested
         </MudChip>
     </div>
 
-    @if (recommendations.Count == 0)
+    @if (AppState.Recommendations.Count == 0)
     {
         <MudAlert Severity="Severity.Info">
             No automated insights or suggested actions are currently available.
@@ -96,7 +96,7 @@
     }
     else
     {
-        @foreach (var recommendation in recommendations)
+        @foreach (var recommendation in AppState.Recommendations)
         {
             <MudPaper Class="pa-3 mb-3" Outlined="true">
 
@@ -159,12 +159,12 @@
     <div class="d-flex justify-space-between align-center mb-3">
         <MudText Typo="Typo.h6">Live Telemetry</MudText>
 
-        <MudChip T="string" Size="Size.Small" Color="@(signalRConnected ? Color.Success : Color.Error)">
-            @(signalRConnected ? "SignalR Connected" : "SignalR Disconnected")
+        <MudChip T="string" Size="Size.Small" Color="@(AppState.SignalRConnected ? Color.Success : Color.Error)">
+            @(AppState.SignalRConnected ? "SignalR Connected" : "SignalR Disconnected")
         </MudChip>
     </div>
 
-    @if (latestTelemetry.Count == 0)
+    @if (AppState.LatestTelemetry.Count == 0)
     {
         <MudText Typo="Typo.body2">
             Waiting for live telemetry...
@@ -172,7 +172,7 @@
     }
     else
     {
-        <MudTable Items="latestTelemetry.Values.OrderBy(x => x.DeviceId)" Hover="true" Dense="true" Striped="true">
+        <MudTable Items="AppState.LatestTelemetry.Values.OrderBy(x => x.DeviceId)" Hover="true" Dense="true" Striped="true">
 
             <HeaderContent>
                 <MudTh>Device</MudTh>
@@ -224,7 +224,7 @@
         Recent Anomalies
     </MudText>
 
-    @if (recentAnomalies.Count == 0)
+    @if (AppState.RecentAnomalies.Count == 0)
     {
         <MudText Typo="Typo.body2">
             No anomalies detected yet.
@@ -232,7 +232,7 @@
     }
     else
     {
-        @foreach (var telemetry in recentAnomalies)
+        @foreach (var telemetry in AppState.RecentAnomalies)
         {
             <MudAlert Severity="Severity.Warning" Class="mb-2">
                 <strong>@telemetry.DeviceId</strong>

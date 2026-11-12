@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 SmartX.Api/*.db
 SmartX.Api/*.db-shm
 SmartX.Api/*.db-wal
+
+# TODO lists
+todo.md
