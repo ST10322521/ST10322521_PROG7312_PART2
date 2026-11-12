@@ -37,6 +37,7 @@ builder.Services.AddScoped<TelemetryService>();
 builder.Services.AddScoped<ISensorService, SensorService>();
 builder.Services.AddScoped<ISensorAttachmentService, SensorAttachmentService>();
 builder.Services.AddScoped<ITelemetryIngestionService, TelemetryIngestionService>();
+builder.Services.AddScoped<NetworkTopologyService>();
 
 /// Singleton
 builder.Services.AddSingleton<TelemetryQueueService>();

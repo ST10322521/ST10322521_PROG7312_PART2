@@ -3,6 +3,7 @@ using SmartX.Shared.Models;
 
 namespace SmartX.Api.Services;
 
+// https://stackoverflow.com/questions/22645024/when-would-i-use-task-yield
 public sealed class RecommendationService
 {
     private readonly LiveSensorRegistry _sensorRegistry;

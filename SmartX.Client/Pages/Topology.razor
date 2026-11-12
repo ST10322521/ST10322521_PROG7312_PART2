@@ -1,0 +1,202 @@
+@page "/topology"
+@using SmartX.Shared.Models.Topology
+
+<PageTitle>Network Topology</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">
+    Network Topology & Mesh Routing
+</MudText>
+
+@if (loading)
+{
+    <MudPaper Class="pa-6">
+        <MudProgressCircular Indeterminate="true" />
+        <MudText Class="mt-3">Loading network topology...</MudText>
+    </MudPaper>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error">
+        @errorMessage
+    </MudAlert>
+}
+else if (topology is null)
+{
+    <MudAlert Severity="Severity.Warning">
+        No network topology data is available.
+    </MudAlert>
+}
+else
+{
+    <MudGrid>
+
+        <MudItem xs="12">
+            <MudPaper Class="pa-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h5">
+                        IoT Mesh Network
+                    </MudText>
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadTopologyAsync" Disabled="@loading">
+                        Refresh
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.overline">Nodes</MudText>
+                <MudText Typo="Typo.h4">@topology.Nodes.Count</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.overline">Online</MudText>
+                <MudText Typo="Typo.h4">@OnlineNodeCount</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.overline">Offline</MudText>
+                <MudText Typo="Typo.h4">@OfflineNodeCount</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.overline">Connections</MudText>
+                <MudText Typo="Typo.h4">@topology.Edges.Count</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h5" Class="mb-4">
+                    Network Nodes
+                </MudText>
+
+                <MudGrid>
+                    @foreach (var node in topology.Nodes)
+                    {
+                        <MudItem xs="12" sm="6" lg="4">
+                            <MudCard>
+                                <MudCardContent>
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+
+                                        <MudText Typo="Typo.h6">
+                                            @node.Name
+                                        </MudText>
+
+                                        <MudChip T="string" Color="@GetStatusColor(node.Status)" Size="Size.Small">
+                                            @node.Status
+                                        </MudChip>
+                                    </MudStack>
+
+                                    <MudText Typo="Typo.body2" Class="mt-2">
+                                        Type: @node.NodeType
+                                    </MudText>
+
+                                    <MudText Typo="Typo.body2">
+                                        Location: @node.Location
+                                    </MudText>
+
+                                    @if (!string.IsNullOrWhiteSpace(node.MacAddress))
+                                    {
+                                        <MudText Typo="Typo.body2">
+                                            MAC: @node.MacAddress
+                                        </MudText>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h5" Class="mb-4">
+                    Gateway
+                </MudText>
+
+                @{
+                    var gateway = topology.Nodes
+                        .FirstOrDefault(n => n.Id == topology.GatewayNodeId);
+                }
+
+                @if (gateway is not null)
+                {
+                    <MudAlert Severity="@GetStatusSeverity(gateway.Status)">
+                        <MudText Typo="Typo.h6">
+                            @gateway.Name
+                        </MudText>
+
+                        <MudText Typo="Typo.body2">
+                            Status: @gateway.Status
+                        </MudText>
+
+                        <MudText Typo="Typo.body2">
+                            Location: @gateway.Location
+                        </MudText>
+                    </MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h5" Class="mb-4">
+                    Network Connections
+                </MudText>
+
+                <MudTable Items="@topology.Edges" Hover="true" Dense="true" Striped="true">
+
+                    <HeaderContent>
+                        <MudTh>Source</MudTh>
+                        <MudTh>Target</MudTh>
+                        <MudTh>Weight</MudTh>
+                        <MudTh>Status</MudTh>
+                    </HeaderContent>
+
+                    <RowTemplate>
+                        <MudTd DataLabel="Source">
+                            @context.SourceNodeId
+                        </MudTd>
+
+                        <MudTd DataLabel="Target">
+                            @context.TargetNodeId
+                        </MudTd>
+
+                        <MudTd DataLabel="Weight">
+                            @context.Weight
+                        </MudTd>
+
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Color="@(context.IsActive
+                                     ? Color.Success
+                                     : Color.Error)" Size="Size.Small">
+                                @(context.IsActive ? "Active" : "Inactive")
+                            </MudChip>
+                        </MudTd>
+                    </RowTemplate>
+
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.body2">
+                    Last updated:
+                    @topology.LastUpdated.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                </MudText>
+            </MudPaper>
+        </MudItem>
+
+    </MudGrid>
+}
