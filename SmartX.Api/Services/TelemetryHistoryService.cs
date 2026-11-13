@@ -87,4 +87,25 @@ public class TelemetryHistoryService
             _history.Remove(deviceId);
         }
     }
+    /// <summary>
+    /// Attempts to retrieve the latest telemetry reading for a specific device. The method takes the device ID as an input parameter and returns a boolean indicating whether a reading was found. If a reading is found, it is returned through the out parameter 'reading'. If there is no entry for the specified device ID or if there are no readings for that device, the method returns false and sets 'reading' to its default value. The method uses a lock to ensure thread safety when accessing the history dictionary.
+    /// </summary>
+    /// <param name="deviceId"></param>
+    /// <param name="reading"></param>
+    /// <returns></returns>
+    public bool TryGetLatestReading(string deviceId, out SensorReading reading)
+    {
+        lock (_lock)
+        {
+            if (_history.TryGetValue(deviceId, out var readings) &&
+                readings.Count > 0)
+            {
+                reading = readings.Last().Value;
+                return true;
+            }
+
+            reading = default;
+            return false;
+        }
+    }
 }
