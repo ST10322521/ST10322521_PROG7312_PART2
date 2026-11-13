@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SmartX.Api.Services;
 using SmartX.Shared.DTOs;
+using SmartX.Shared.Enums;
 
 namespace SmartX.Api.Controllers;
 
@@ -71,6 +72,45 @@ public class TelemetryController : ControllerBase
         }
 
         var history = _historyService.GetHistory(deviceId);
+
+        return Ok(history);
+    }
+    /// <summary>
+    /// Retrieves the telemetry history for a specific device within a specified time range. The method accepts a deviceId, telemetryType, and two DateTime parameters (from and to) as query parameters. It validates the input parameters and queries the TelemetryHistoryService to get the historical telemetry data that matches the specified criteria. If the deviceId is not provided or if the 'from' date is later than the 'to' date, it returns a BadRequest response. Otherwise, it returns an HTTP 200 OK response with the filtered telemetry history data.
+    /// </summary>
+    /// <param name="deviceId"></param>
+    /// <param name="telemetryType"></param>
+    /// <param name="from"></param>
+    /// <param name="to"></param>
+    /// <returns></returns>
+    [HttpGet("history/{deviceId}/range")]
+    public IActionResult GetHistoryRange(
+        string deviceId,
+        [FromQuery] TelemetryType telemetryType,
+        [FromQuery] DateTime from,
+        [FromQuery] DateTime to)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId))
+        {
+            return BadRequest(new
+            {
+                error = "Device ID is required."
+            });
+        }
+
+        if (from > to)
+        {
+            return BadRequest(new
+            {
+                error = "The start timestamp must be earlier than or equal to the end timestamp."
+            });
+        }
+
+        var history = _historyService.GetHistory(
+            deviceId,
+            telemetryType,
+            from,
+            to);
 
         return Ok(history);
     }

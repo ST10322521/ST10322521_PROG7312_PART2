@@ -1,4 +1,5 @@
 @page "/history"
+@using SmartX.Shared.Enums
 
 <PageTitle>Telemetry History</PageTitle>
 
@@ -8,8 +9,13 @@
 
 <MudPaper Class="pa-4">
 
+    <MudText Typo="Typo.h6" Class="mb-3">
+        Historical Telemetry Range Query
+    </MudText>
+    
     <div class="d-flex flex-wrap gap-3 mb-4">
 
+        @* Select the device for which to view historical telemetry *@
         <MudSelect T="string" @bind-Value="selectedDeviceId" Label="Select device" Variant="Variant.Outlined"
                    Style="min-width:280px;">
 
@@ -21,10 +27,34 @@
             }
 
         </MudSelect>
+        @* Select the type of telemetry to view *@
+        <MudSelect T="TelemetryType" @bind-Value="selectedTelemetryType" Label="Telemetry type"
+                   Variant="Variant.Outlined" Style="min-width:220px;">
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.History"
-                   Disabled="@string.IsNullOrWhiteSpace(selectedDeviceId)" OnClick="LoadHistoryAsync">
-            Load History
+            @foreach (var telemetryType in Enum.GetValues<TelemetryType>())
+            {
+                <MudSelectItem Value="@telemetryType">
+                    @telemetryType
+                </MudSelectItem>
+            }
+
+        </MudSelect>
+        
+        <MudDatePicker @bind-Date="startDate" Label="From date" Variant="Variant.Outlined" DateFormat="yyyy-MM-dd"
+                       Clearable="true" />
+
+        <MudTimePicker @bind-Time="startTime" Label="From time" Variant="Variant.Outlined" AmPm="false" />
+
+        <MudDatePicker @bind-Date="endDate" Label="To date" Variant="Variant.Outlined" DateFormat="yyyy-MM-dd"
+                       Clearable="true" />
+
+        <MudTimePicker @bind-Time="endTime" Label="To time" Variant="Variant.Outlined" AmPm="false" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search"
+                   Disabled="@(loading || string.IsNullOrWhiteSpace(selectedDeviceId))" OnClick="QueryHistoryAsync">
+
+            Query History
+
         </MudButton>
 
     </div>
@@ -41,15 +71,29 @@
         <MudProgressLinear Indeterminate="true" Class="mb-4" />
     }
 
-    @if (!loading && history.Count == 0 && !string.IsNullOrWhiteSpace(selectedDeviceId))
+    @if (!loading && history.Count == 0 && hasQueriedRange)
     {
-        <MudAlert Severity="Severity.Info">
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            No telemetry records match the selected device, telemetry type,
+            and time range.
+        </MudAlert>
+    }
+    else if (!loading &&
+             history.Count == 0 &&
+             !string.IsNullOrWhiteSpace(selectedDeviceId) &&
+             !hasQueriedRange)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
             No historical telemetry is available for this device yet.
         </MudAlert>
     }
 
     @if (history.Count > 0)
     {
+        <MudText Typo="Typo.h6" Class="mb-3">
+            Query Results
+        </MudText>
+
         <MudTable Items="history" Hover="true" Dense="true" Striped="true">
 
             <HeaderContent>

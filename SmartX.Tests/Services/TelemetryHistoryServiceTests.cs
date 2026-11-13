@@ -70,9 +70,9 @@ public class TelemetryHistoryServiceTests
 
         var history = service.GetHistory(
             "HISTORY-002",
+            TelemetryType.Temperature,
             baseTime.AddMinutes(2),
             baseTime.AddMinutes(3));
-
         Assert.Equal(2, history.Count);
         Assert.Equal(21, history[0].Value);
         Assert.Equal(22, history[1].Value);
