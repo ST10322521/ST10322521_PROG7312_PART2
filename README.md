@@ -8,12 +8,10 @@ This README documents the implemented functionality for:
 
 - **Part 1 – Task 2: IoT Application**
 - **Part 2: Advanced Data Structures and Predictive Action**
-
-The project intentionally does **not** implement **Network Topology and Mesh Routing**, as that functionality is reserved for Part 3 / the final PoE scope.
+- **Part 3: Advanced Data Structures, Network Topology, Graph Traversal and Mesh Routing**
 
 ## Demonstration Video
-YouTube: https://youtu.be/OtAjBqLiV2E
-[![SmartX Part 2 Demo](https://img.youtube.com/vi/OtAjBqLiV2E/maxresdefault.jpg)](https://www.youtube.com/embed/OtAjBqLiV2E)
+YouTube: https://youtu.be/MfqcaDcqCeo
 
 ---
 
@@ -77,6 +75,7 @@ The project requires:
 - Git
 - Docker
 - Docker Compose
+- Docker and Docker Compose are required only when using the containerised deployment.
 
 Verify the .NET installation:
 
@@ -95,10 +94,11 @@ Verify Docker Compose:
 ```bash
 docker compose version
 ```
-
 ---
 
 # 3. Building the Solution Locally
+
+clone: https://github.com/ST10322521/ST10322521_PROG7312_PART2.git
 
 From the solution root:
 
@@ -560,23 +560,11 @@ Smart-X implements both rectangular and jagged arrays through the `TelemetryBatc
 
 ## Rectangular array
 
-A rectangular:
-
-```csharp
-double[,]
-```
-
-array is used for batches where sensors have a consistent number of readings.
+A rectangular ```double[,]``` array is used for batches where sensors have a consistent number of readings.
 
 ## Jagged array
 
-A jagged:
-
-```csharp
-double[][]
-```
-
-array is used where sensors may have different numbers of readings.
+A jagged ```double[][]``` array is used where sensors may have different numbers of readings.
 
 Both implementations are integrated into the live sensor simulator.
 
@@ -671,11 +659,26 @@ Telemetry received from the API is delivered to the client through SignalR so th
 
 ---
 
-# 19. Part 2 – Advanced Data Structures
+# 19. Part 2 and Part 3 – Advanced Data Structures
 
-Part 2 activates the real-time command stream and telemetry history functionality.
+Smart-X uses the required data structures and algorithms not as separate demonstrations, but as functional elements of the application.
 
-The application uses the required advanced data structures in actual runtime services.
+Part 2 implements real-time command processing, telemetry history and predictive recommendation capabilities.
+
+Part 3 provides an extension to Smart-X for efficient range queries on historical telemetry and network analysis based on trees, graphs, BFS traversal, heap priority processing and MST algorithms.
+
+Part 3 introduces:
+
+- Historical telemetry storage based on AVL tree
+- Range query support for historical telemetry
+- Network graph representation
+- BFS (breadth-first search) traversal
+- Network traversal from gateway or specific sensor
+- Route finding
+- MST (minimum spanning tree)
+- Prim's MST algorithm
+- Generic `MinHeap<T>` priority processing
+- Network topology visualizer
 
 ---
 
@@ -755,111 +758,232 @@ The registry is populated from the application's registered sensors and updated 
 
 ---
 
-# 24. SortedDictionary<TKey,TValue> – Telemetry History
+# 24. AvlTree
 
-Historical telemetry is stored using:
+Historical telemetry is stored as follows:
 
 ```csharp
-SortedDictionary<DateTime, SensorReading>
+AvlTree<DateTime, SensorReading>
 ```
 
 for each device.
 
-The timestamp is the key, which maintains readings in chronological order.
+```DateTime``` is used as the key, keeping readings ordered by time.
 
-The History page retrieves this information from the API and displays:
+## Purposes
 
-- Timestamp
-- Device
-- Telemetry type
-- Value
+The AVL tree provides ordered in-memory storage for historical sensor readings, providing efficient insertions, lookups, maximum-value searches and range queries.
 
-The history functionality is available from the application's active navigation menu.
+## Implementation
 
-Telemetry history is maintained in the application's runtime history service rather than being treated as long-term database telemetry storage.
+The generic AvlTree<TKey,TValue> implementation allows for:
 
----
+- Insertions
+- Key lookups
+- In-order traversal
+- Maximum value search
+- Inclusive range queries
+- AVL balancing using rotations
 
-# 25. HashSet<T> – Unique Active Error States
-
-The live sensor registry uses:
-
-```csharp
-HashSet<string>
-```
-
-to maintain active error states.
-
-The HashSet prevents duplicate active error entries.
-
-Examples include:
-
-```text
-ENUM-TEST-001:Critical
-ENUM-TEST-001:Disconnected
-TEST-RELAY-001:Disconnected
-```
-
-This allows the dashboard to display unique active alerts without repeatedly adding the same error state.
-
----
-
-# 26. Real-Time Command Stream
-
-The Part 2 command interface allows operators to manually control simulated devices.
-
-The operator can select a device and issue commands such as:
-
-```text
-Start
-Stop
-SetState
-```
-
-Commands are sent to the API and placed into the command processing pipeline.
-
-The simulator listens to the SignalR command stream and executes received commands.
-
-The command flow is:
-
-```text
-Blazor Commands Page
-       │
-       │ HTTP
-       ▼
-CommandsController
-       │
-       ▼
-DeviceCommandQueueService
-       │
-       ▼
-DeviceCommandProcessor
-       │
-       │ SignalR
-       ▼
-Sensor Simulator
-       │
-       ▼
-Simulated Device
-```
-
-The command history is displayed in the command interface and supports Undo.
-
----
-
-# 27. Telemetry History
-
-The History page allows operators to select a device and load historical telemetry.
-
-Historical records are retrieved from the API and displayed sequentially by timestamp.
-
-This functionality demonstrates the use of:
+Example of insertion:
 
 ```csharp
-SortedDictionary<DateTime, SensorReading>
+historyTree.Insert(reading.Timestamp, reading);
 ```
 
-within the application.
+Example of range query:
+```csharp
+var readings = historyTree
+    .Range(from, to)
+    .Select(pair => pair.Value)
+    .ToList();
+```
+## AVL Tree Reason
+
+The choice of AVL tree is driven by the need to keep the historical telemetry ordered according to its timestamp and to perform many inserts and timestamp-based queries.
+AVL balance ensures that the height of the tree remains logarithmic.
+
+## Smart-X Telemetry
+
+TelemetryHistoryService maintains one AVL tree for each device.
+
+From the History page, operators can choose:
+
+- Sensor/Device
+- Type of telemetry
+- Start timestamp
+- End timestamp
+
+The API queries the appropriate AVL tree and return all readings from that particular period.
+
+The history endpoint is:
+```csharp
+GET /api/Telemetry/history/{deviceId}/range
+```
+And this makes the AVL tree a part of the Smart-X system in use, not just for demonstration.
+
+---
+
+# 25. Network Graph
+
+Graphs are employed for representation of the Smart-X sensor network in Part 3.
+
+Implementation is:
+
+```csharp
+NetworkGraph
+```
+
+with network nodes and weighted edges.
+
+## Purpose
+
+The graph represents relationships between the gateway, sensors and other network devices.
+
+Nodes represent devices and edges represent active network connections.
+
+## Implementation
+
+Nodes:
+
+- Smart-X gateway
+- Registered sensors
+- Connected network devices
+
+Edges contain:
+
+- Source node
+- Target node
+- Weight
+- Active/inactive state
+
+The graph employs adjacency-based neighbour discovery in order to enable efficient neighbour inspection by graph algorithms.
+
+## Why a Graph?
+
+A graph was chosen because an IoT mesh network consists of entities that have relationships with one another.
+
+Weighted edges allow Smart-X to traverse the network and evaluate its cost.
+
+Adjacency-based storage avoids scanning the entire list of network connections multiple times when searching for neighbours of a particular device.
+
+## Smart-X Usage
+
+`NetworkTopologyService` builds the graph based on the registered sensor network.
+
+The built topology includes:
+
+- Network nodes
+- Network edges
+- Health/status of nodes
+- Gateway information
+- Traversal order of the gateway
+- Information about disconnected nodes
+- Minimum spanning tree edges
+
+---
+
+# 26. Breadth-First Search and Network Routing
+
+The Smart-X framework implements **Breadth-First Search (BFS)** for graph traversal.
+
+DFS is not implemented at the moment and BFS is chosen because the application should process the network layer by layer either from the gateway or from the selected sensor.
+
+## Purpose
+
+The BFS algorithm defines the order of visiting network nodes.
+
+It is important when processing network hops and checking the connectivity from the selected starting point.
+
+## Implementation
+
+The BFS algorithm works on the runtime object `NetworkGraph`.
+
+The gateway node can serve as the starting point for the algorithm, enabling the application to determine the order in which connected sensors are visited.
+
+The following endpoint of the Topology service is available:
+
+```text
+GET /api/NetworkTopology/traverse/{startNodeId}
+```
+
+## Efficiency
+
+BFS works through all the available nodes and edges in the graph.
+
+As `NetworkGraph` offers adjacency-based neighbor lookup, BFS does not need to scan all network edges.
+
+For adjacency list graphs, the BFS algorithm has the following time complexity:
+
+```text
+O(V + E)
+```
+
+where:
+
+- `V` = number of vertices/nodes
+- `E` = number of edges
+
+## Routing
+
+Route discovery from selected node to gateway is also provided by Smart-X:
+
+```text
+GET /api/NetworkTopology/route/{startNodeId}
+```
+
+This route discovery runs over Smart-X network graph instead of a demo graph hardcoded.
+
+The Network Topology page shows:
+
+- Starting node
+- Traversal
+- Gateway
+- Connected nodes
+- Unconnected nodes
+- Status of nodes
+- Routing info
+
+---
+
+# 27. Minimum Spanning Tree - Prim's Algorithm
+
+Smart-X uses **Prim's algorithm** to compute the **Minimum Spanning Tree (MST)**.
+
+## Purpose
+
+The MST discovers a minimum-cost set of connections in the network needed to connect all nodes in the network, without forming cycles.
+
+This enables Smart-X to show network optimization based on the generated sensor topology.
+
+## Implementation
+
+Prim's algorithm is implemented in:
+
+```csharp
+NetworkGraph
+```
+
+Candidates are saved in:
+
+```csharp
+MinHeap<MstEdgeCandidate>
+```
+
+The algorithm works as follows:
+
+1. Start from the gateway.
+2. Add candidate edges to the MinHeap.
+3. Extract the candidate with the lowest cost.
+4. Add the unvisited target node to the MST.
+5. Add eligible edges of that node to the heap.
+6. Repeat until no more eligible candidates are left.
+
+## Why Prim's Algorithm?
+
+Prim's algorithm was chosen because it is designed to find an MST in a weighted graph.
+
+The MinHeap offers an efficient way of accessing the lowest-cost candidate edge.
 
 ---
 
@@ -876,6 +1000,35 @@ Operators can search using:
 Sensors can also be filtered by category.
 
 Search interactions are recorded by the recommendation service so that operator activity can contribute to predictive recommendations.
+
+## Efficiency
+
+`MinHeap<T>` is used to provide:
+
+```text
+Insert: O(log n)
+Extract minimum: O(log n)
+```
+
+This means that Prim's algorithm uses heap-based priority operations on the candidate edges instead of sorting the entire list of candidates each time.
+
+## Smart-X Implementation
+
+The resulting MST is saved in:
+
+```csharp
+NetworkTopology.MinimumSpanningTreeEdges
+```
+
+The Network Topology page shows:
+
+- MST source node
+- MST destination node
+- Weight
+- Count of MST edges
+- MST total cost
+
+In any connected network with `N` nodes, the MST will have `N - 1` edges.
 
 ---
 
@@ -917,6 +1070,21 @@ Each recommendation includes relevant information such as:
 
 Where appropriate, the operator can directly execute the suggested command or navigate to the command interface for further inspection.
 
+## Predictive Engine Collections
+
+The recommendation engine makes use of the standard collections depending on the nature of the operation to be performed.
+
+| Collection | Purpose | Why chosen | Performance | Smart-X Utilisation |
+|---|---|---|---|---|
+| `Dictionary<TKey,TValue>` | Keyed state and device queries | Provides fast access to entries by ID. | O(1) average query time | Device and recommendation related states |
+| `HashSet<T>` | Membership tests | Ensures that there are no duplicate state entries | O(1) average query time | Errors/disconnected device tracking |
+| `List<T>` | Aggregation of ordered results | Basic ordered collection | O(n) search/iteration | Recommendations and result sets |
+| `PriorityQueue<T>` | Priority based operations | Automatically prioritises higher-priority operations. | O(log n) enqueue/dequeue | Critical telemetry/error handling |
+
+These collections have been chosen on the basis of the access patterns needed by the application. Keyed accesses employ dictionaries, membership tests use hash sets, ordered results use lists, while priority accesses use priority queues.
+
+Thus the collections form part of the application processing and are not demonstration code.
+
 ---
 
 # 30. Navigation
@@ -929,12 +1097,7 @@ Sensors
 Deployment Validation
 History
 Controls
-```
-
-The following functionality remains intentionally disabled because it belongs to a later scope:
-
-```text
-Network Topology and Mesh Routing
+Network Topology
 ```
 
 ---
@@ -990,23 +1153,93 @@ Docker runtime testing additionally verifies:
 
 ---
 
-# 32. Verifying the Required Data Structures
+# 32. Code Examples
 
-The following table maps the Part 2 requirements to their implementation.
+Examples below show how the required data structures and algorithms are used in Smart-X.
 
-| Requirement | Implementation | Runtime Usage |
-|---|---|---|
-| `Queue<T>` | `TelemetryQueueService` | Incoming telemetry |
-| `PriorityQueue<T>` | Critical alert processing | Critical telemetry |
-| `Stack<T>` | `DeviceCommandProcessor` | Command history and Undo |
-| `Dictionary<TKey,TValue>` | `LiveSensorRegistry` | Live device lookup |
-| `SortedDictionary<TKey,TValue>` | `TelemetryHistoryService` | Historical telemetry |
-| `HashSet<T>` | `LiveSensorRegistry` | Unique active errors |
-| Rectangular array | `TelemetryBatch` | Simulator telemetry |
-| Jagged array | `TelemetryBatch` | Simulator telemetry |
-| `List<T>` | Telemetry/recommendation/history processing | Application processing |
+## 32.1 AVL Tree Insert and Search
 
-The structures are integrated into application services and runtime flows rather than being present only as unused classes.
+```csharp
+var historyTree = new AvlTree<DateTime, SensorReading>();
+
+historyTree.Insert(reading.Timestamp, reading);
+
+var readings = historyTree
+    .Range(from, to)
+    .Select(pair => pair.Value)
+    .ToList();
+```
+
+The AVL tree maintains telemetry sorted by timestamp and allows searching for the historical records within a certain period.
+
+## 32.2 Network Graph Representation
+
+```csharp
+var graph = new NetworkGraph();
+
+graph.AddVertex(node);
+
+graph.AddEdge(new NetworkEdge
+{
+    SourceNodeId = sourceId,
+    TargetNodeId = targetId,
+    Weight = weight,
+    IsActive = true
+});
+```
+
+The graph presents Smart-X devices as vertices and connections in the network as weighted edges.
+
+## 32.3 BFS
+
+```csharp
+var traversal = graph.BreadthFirstSearch(startNodeId);
+```
+
+BFS traverses the actual Smart-X network graph, starting from the chosen starting node.
+
+## 32.4 MinHeap
+
+```csharp
+var candidates = new MinHeap<MstEdgeCandidate>();
+
+candidates.Insert(candidate);
+
+if (candidates.TryExtractMin(out var minimum))
+{
+    // Process the lowest weight candidate edge.
+}
+```
+
+MinHeap allows priority based extraction of the lowest weight candidate.
+
+## 32.5 Prim's MST
+
+```csharp
+var minimumSpanningTree =
+    graph.PrimMinimumSpanningTree(gatewayId);
+```
+
+Prim's algorithm uses MinHeap to process the candidate edges and create the minimum spanning tree.
+
+## 32.6 Predictive Engine Collections
+
+```csharp
+var deviceStates =
+    new Dictionary<string, DeviceState>();
+
+var disconnectedDevices =
+    new HashSet<string>();
+
+var recommendations =
+    new List<Recommendation>();
+```
+
+These collections offer the following advantages:
+
+* key-based lookup;
+* set membership testing;
+* ordered result aggregation.
 
 ---
 
@@ -1054,7 +1287,7 @@ Important endpoints include:
 /smartxHub
 ```
 
-The exact API surface can be inspected through the source code and, when running in Development, the API's OpenAPI support.
+The exact API surface can be inspected through the source code and.
 
 ---
 
@@ -1198,9 +1431,24 @@ The implemented scope covers:
 - Predictive recommendation engine
 - Suggested Actions dashboard
 
-## Not included in this scope
+## Part 3
 
-Network topology and mesh routing are intentionally excluded from the current implementation because they are reserved for the later project scope.
+- AVL tree for historical telemetry
+- Range query of historical telemetry
+- Filtering by sensor and telemetry type
+- Filter by date/time range
+- Network graph creation
+- Weighted network edges
+- Gateway based network topology
+- Breadth-first search
+- Network traversal
+- Route discovery
+- Detection of disconnected nodes
+- Minimum spanning tree
+- Prim's algorithm
+- General MinHeap
+- Interactive Network Topology page
+- Edge weight and total cost MST display
 
 ---
 
@@ -1312,64 +1560,49 @@ docker compose down -v
 
 Use `docker compose down -v` only when intentionally resetting the Docker application's persisted database and attachment storage.
 
----
-
-# 41. Demonstration Checklist
-
-For a complete demonstration of the implemented scope, the following application functionality should be shown through the Smart-X UI:
-
-1. Open the Dashboard.
-2. Show live sensor telemetry.
-3. Show telemetry status and reading changes.
-4. Open Sensors and demonstrate sensor registration/search.
-5. Demonstrate sensor attachment upload.
-6. Open Deployment Validation and demonstrate recursive validation.
-7. Open History and demonstrate historical telemetry.
-8. Open Controls/Commands and issue a device command.
-9. Demonstrate Undo.
-10. Show the simulator receiving/executing the command.
-11. Demonstrate active alerts and disconnected devices.
-12. Demonstrate Suggested Actions.
-13. Use a Suggested Action to inspect or control a device.
-14. Demonstrate the application running through Docker at:
-   `http://localhost:8080`
-15. Show Docker container status with:
-   `docker compose ps`
-16. Show that the API reports:
-   `healthy`
-
-The demonstration should use the application's actual UI and integrated runtime functionality rather than relying only on isolated API requests.
 
 ---
 
 # 42. Final Architecture Summary
 
-Smart-X integrates the following components:
+Smart-X architecture contains:
 
 ```text
 Blazor WebAssembly
-        │
-        │ HTTP / SignalR
-        ▼
+       │
+       │ HTTP / SignalR
+       ▼
 ASP.NET Core Web API
-        │
-        ├── Sensor Registration
-        ├── Telemetry Ingestion
-        ├── FIFO Queue
-        ├── Priority Processing
-        ├── Live Sensor Registry
-        ├── Telemetry History
-        ├── Command Processing
-        ├── Command Stack / Undo
-        ├── Recommendation Engine
-        ├── Recursive Validation
-        ├── Attachment Management
-        └── SQLite Persistence
-        │
-        ▼
-Sensor Simulator
-        │
-        └── Simulated IoT Devices
+       │
+       ├── Sensor Registration
+       ├── Telemetry Ingestion
+       ├── FIFO Queue
+       ├── Priority Processing
+       ├── Live Sensor Registry
+       ├── AVL Telemetry History
+       ├── Historical Range Queries
+       ├── Network Graph
+       ├── BFS Traversal
+       ├── Route Discovery
+       ├── MinHeap
+       ├── Prim MST
+       ├── Command Processing
+       ├── Command Stack / Undo
+       ├── Recommendation Engine
+       ├── Recursive Validation
+       ├── Attachment Management
+       └── SQLite Persistence
+              │
+              ▼
+       Sensor Simulator
+              │
+              └── Simulated IoT Devices
 ```
 
-The implementation demonstrates the required Part 1 and Part 2 functionality as an integrated application, with the required data structures and algorithms actively used by the runtime system.
+Smart-X implementation now encompasses the functionality from integrated Part 1, Part 2 and Part 3.
+
+Part 3 expands the application capabilities from telemetry and command processing to the representation of the IoT environment as a weighted network graph and application of graph algorithms in the context of the application topology.
+
+Historical telemetry is processed by an AVL tree, network graph traversal is performed using BFS, and the minimum spanning tree is generated using Prim's algorithm with the help of a MinHeap.
+
+All these data structures and algorithms are connected with the API and presented through the Blazor operator interface, thus making the final application perform required functionality as part of the integrated runtime.
