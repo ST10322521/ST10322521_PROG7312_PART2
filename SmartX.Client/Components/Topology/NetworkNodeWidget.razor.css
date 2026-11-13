@@ -1,0 +1,37 @@
+.network-node {
+    min-width: 150px;
+    padding: 12px;
+    border: 2px solid;
+    border-radius: 10px;
+    text-align: center;
+    background: var(--mud-palette-surface);
+}
+
+.network-node.online {
+    border-color: var(--mud-palette-success);
+}
+
+.network-node.offline {
+    border-color: var(--mud-palette-error);
+    opacity: 0.7;
+}
+
+.network-node.gateway {
+    border-color: var(--mud-palette-primary);
+}
+
+.network-node-title {
+    font-weight: 600;
+}
+
+.network-node-status {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.network-node-mac {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    opacity: 0.75;
+}

@@ -1,0 +1,28 @@
+@using Blazor.Diagrams.Core.Geometry
+@using Blazor.Diagrams.Core.Extensions
+@using SmartX.Client.Components.Topology
+
+@if (Label is not null && Position is not null && Label.ShowLabel)
+{
+    @((MarkupString)$"""
+        <foreignObject class="network-link-label"
+                       x="{X.ToInvariantString()}"
+                       y="{Y.ToInvariantString()}">
+            <div class="link-label">
+                {Label.Content}
+            </div>
+        </foreignObject>
+        """)
+}
+
+@code {
+    [Parameter]
+    public NetworkLinkLabelModel? Label { get; set; }
+
+    [Parameter]
+    public Point? Position { get; set; }
+
+    private double X => Position?.X + (Label?.Offset?.X ?? 0) ?? 0;
+
+    private double Y => Position?.Y + (Label?.Offset?.Y ?? 0) ?? 0;
+}

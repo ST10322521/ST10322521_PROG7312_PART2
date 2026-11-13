@@ -1,5 +1,8 @@
 @page "/topology"
+@using Blazor.Diagrams.Components
 @using SmartX.Shared.Models.Topology
+
+@* https://blazor-diagrams.zhaytam.com/documentation/display *@
 
 <PageTitle>Network Topology</PageTitle>
 
@@ -29,7 +32,7 @@ else if (topology is null)
 else
 {
     <MudGrid>
-
+        @* Display the network topology summary and graph *@
         <MudItem xs="12">
             <MudPaper Class="pa-4">
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -38,13 +41,14 @@ else
                     </MudText>
 
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
-                               OnClick="LoadTopologyAsync" Disabled="@loading">
+                               OnClick="RefreshTopologyAsync" Disabled="@loading">
                         Refresh
                     </MudButton>
                 </MudStack>
             </MudPaper>
         </MudItem>
 
+        @* Display the network topology summary cards *@
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Class="pa-4">
                 <MudText Typo="Typo.overline">Nodes</MudText>
@@ -52,6 +56,7 @@ else
             </MudPaper>
         </MudItem>
 
+        @* Display the online nodes count *@
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Class="pa-4">
                 <MudText Typo="Typo.overline">Online</MudText>
@@ -59,6 +64,7 @@ else
             </MudPaper>
         </MudItem>
 
+        @* Display the offline nodes count *@
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Class="pa-4">
                 <MudText Typo="Typo.overline">Offline</MudText>
@@ -66,6 +72,7 @@ else
             </MudPaper>
         </MudItem>
 
+        @* Display the connections count *@
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Class="pa-4">
                 <MudText Typo="Typo.overline">Connections</MudText>
@@ -73,6 +80,22 @@ else
             </MudPaper>
         </MudItem>
 
+        @* Display the interactive network topology graph *@
+        <MudItem xs="12">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h5" Class="mb-4">
+                    Network Graph
+                </MudText>
+
+                <div class="topology-diagram-container">
+                    <CascadingValue Value="Diagram" IsFixed="true">
+                        <DiagramCanvas />
+                    </CascadingValue>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        @* Display the network nodes in a card layout *@
         <MudItem xs="12" md="8">
             <MudPaper Class="pa-4">
                 <MudText Typo="Typo.h5" Class="mb-4">
@@ -118,6 +141,7 @@ else
             </MudPaper>
         </MudItem>
 
+        @* Display the gateway node information *@
         <MudItem xs="12" md="4">
             <MudPaper Class="pa-4">
                 <MudText Typo="Typo.h5" Class="mb-4">
@@ -148,6 +172,7 @@ else
             </MudPaper>
         </MudItem>
 
+        @* Display the network connections in a table *@
         <MudItem xs="12">
             <MudPaper Class="pa-4">
                 <MudText Typo="Typo.h5" Class="mb-4">
@@ -189,6 +214,7 @@ else
             </MudPaper>
         </MudItem>
 
+        @* Display the last updated timestamp of the topology data *@
         <MudItem xs="12">
             <MudPaper Class="pa-4">
                 <MudText Typo="Typo.body2">

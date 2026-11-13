@@ -1,0 +1,32 @@
+@using Blazor.Diagrams.Components.Renderers
+@using SmartX.Client.Components.Topology
+
+@* https://blazor-diagrams.zhaytam.com/documentation/nodes-customization *@
+
+<div class="network-node @(Node.NetworkNode.IsGateway
+     ? "gateway"
+     : Node.NetworkNode.Status.Equals("Online", StringComparison.OrdinalIgnoreCase)
+        ? "online"
+        : "offline")">
+
+    <div class="network-node-title">
+        @Node.Title
+    </div>
+
+    <div class="network-node-status">
+        @Node.NetworkNode.Status
+    </div>
+
+    @if (!Node.NetworkNode.IsGateway &&
+         !string.IsNullOrWhiteSpace(Node.NetworkNode.MacAddress))
+    {
+        <div class="network-node-mac">
+            @Node.NetworkNode.MacAddress
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public NetworkNodeModel Node { get; set; } = null!;
+}

@@ -1,0 +1,14 @@
+.network-link-label {
+    pointer-events: none;
+}
+
+.link-label {
+    width: 60px;
+    padding: 2px 6px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    background: var(--mud-palette-surface);
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
