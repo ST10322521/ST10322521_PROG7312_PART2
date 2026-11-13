@@ -51,6 +51,14 @@ public partial class Topology
     /// </summary>
     private int OfflineNodeCount => topology?.Nodes.Count(n => string.Equals(n.Status, "Offline", StringComparison.OrdinalIgnoreCase)) ?? 0;
     /// <summary>
+    /// Gets the list of edges that form the minimum spanning tree of the network topology. If the topology is null, an empty list is returned. The minimum spanning tree edges are used to calculate the total cost of connecting all nodes in the network with the least total weight.
+    /// </summary>
+    private IReadOnlyList<NetworkEdge> MinimumSpanningTreeEdges => topology?.MinimumSpanningTreeEdges ?? [];
+    /// <summary>
+    /// Gets the total cost of the minimum spanning tree by summing the weights of all edges in the minimum spanning tree. If there are no edges, the cost is zero. This value represents the minimum total weight required to connect all nodes in the network topology.
+    /// </summary>
+    private double MinimumSpanningTreeCost => MinimumSpanningTreeEdges.Sum(edge => edge.Weight);
+    /// <summary>
     /// Asynchronously initializes the component by creating a new BlazorDiagram instance and loading the network topology data from the API. The method sets the loading state to true while fetching the data and handles any exceptions that may occur during the HTTP request. If successful, the topology data is stored; otherwise, an error message is set for display. Finally, the loading state is reset to false.
     /// </summary>
     /// <returns></returns>

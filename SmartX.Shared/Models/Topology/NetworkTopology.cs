@@ -6,6 +6,8 @@ public class NetworkTopology
 
     public List<NetworkEdge> Edges { get; set; } = [];
 
+    public List<NetworkEdge> MinimumSpanningTreeEdges { get; set; } = [];
+
     public string? GatewayNodeId { get; set; }
 
     public List<string> GatewayTraversalOrder { get; set; } = [];

@@ -1,8 +1,11 @@
+using SmartX.Shared.DataStructures.Heaps;
 using SmartX.Shared.Models.Topology;
 
 namespace SmartX.Shared.DataStructures.Graph;
 /// <summary>
 /// Represents a directed graph where nodes are represented by NetworkNode objects and edges are represented by NetworkEdge objects.
+/// 
+/// https://www.geeksforgeeks.org/dsa/prims-minimum-spanning-tree-mst-greedy-algo-5/
 /// </summary>
 public class NetworkGraph
 {
@@ -273,6 +276,70 @@ public class NetworkGraph
         return path;
     }
     /// <summary>
+    /// Finds the minimum spanning tree (MST) of the graph using Prim's algorithm, starting from the specified node ID. The method returns a list of NetworkEdge objects representing the edges included in the MST. If the starting node does not exist or is offline, an empty list is returned. The algorithm maintains a set of visited nodes and a priority queue of candidate edges, selecting the edge with the smallest weight that connects a visited node to an unvisited node until all reachable nodes are included in the MST.
+    /// </summary>
+    /// <param name="startNodeId"></param>
+    /// <returns></returns>
+    public IReadOnlyList<NetworkEdge> PrimMinimumSpanningTree(string startNodeId)
+    {
+        if (!ContainsVertex(startNodeId) || !IsNodeOnline(startNodeId))
+        {
+            return [];
+        }
+
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var minimumSpanningTree = new List<NetworkEdge>();
+        var candidates = new MinHeap<MstEdgeCandidate>();
+
+        visited.Add(startNodeId);
+        // Add all edges from the starting node to the candidate list
+        foreach (var edge in GetNeighbours(startNodeId))
+        {
+            if (edge.IsActive && IsNodeOnline(edge.TargetNodeId))
+            {
+                candidates.Insert(new MstEdgeCandidate
+                {
+                    SourceNodeId = edge.SourceNodeId,
+                    TargetNodeId = edge.TargetNodeId,
+                    Weight = edge.Weight
+                });
+            }
+        }
+        // Continue adding edges to the MST until all reachable nodes are included
+        while (candidates.TryExtractMin(out var candidate))
+        {
+            if (!visited.Add(candidate.TargetNodeId))
+            {
+                continue;
+            }
+
+            minimumSpanningTree.Add(new NetworkEdge
+            {
+                SourceNodeId = candidate.SourceNodeId,
+                TargetNodeId = candidate.TargetNodeId,
+                Weight = candidate.Weight,
+                IsActive = true
+            });
+            // Add all edges from the newly added node to the candidate list
+            foreach (var edge in GetNeighbours(candidate.TargetNodeId))
+            {
+                if (edge.IsActive &&
+                    IsNodeOnline(edge.TargetNodeId) &&
+                    !visited.Contains(edge.TargetNodeId))
+                {
+                    candidates.Insert(new MstEdgeCandidate
+                    {
+                        SourceNodeId = edge.SourceNodeId,
+                        TargetNodeId = edge.TargetNodeId,
+                        Weight = edge.Weight
+                    });
+                }
+            }
+        }
+
+        return minimumSpanningTree;
+    }
+    /// <summary>
     /// Determines whether the graph is connected, meaning there is a path between any two vertices. The method performs a breadth-first search (BFS) starting from an arbitrary vertex and keeps track of visited vertices. If all vertices are visited during the traversal, the graph is considered connected. The method returns true if the graph is connected; otherwise, it returns false.
     /// </summary>
     /// <returns></returns>
@@ -316,5 +383,30 @@ public class NetworkGraph
     public bool IsNodeOnline(string nodeId)
     {
         return _vertices.TryGetValue(nodeId, out var node) && string.Equals(node.Status, "Online", StringComparison.OrdinalIgnoreCase);
+    }
+    /// <summary>
+    /// Represents a candidate edge for inclusion in the minimum spanning tree (MST) of the graph. The class implements the IComparable interface to allow comparison of edges based on their weights, enabling the use of priority queues or sorting algorithms to efficiently select the next edge to add to the MST. Each candidate edge contains the source node ID, target node ID, and weight, which are required properties for constructing the MST.
+    /// </summary>
+    private sealed class MstEdgeCandidate : IComparable<MstEdgeCandidate>
+    {
+        public required string SourceNodeId { get; init; }
+
+        public required string TargetNodeId { get; init; }
+
+        public required double Weight { get; init; }
+        /// <summary>
+        /// Compares the current MstEdgeCandidate instance with another instance based on their weights. The method returns a negative integer if the current instance has a smaller weight, zero if the weights are equal, and a positive integer if the current instance has a larger weight. If the other instance is null, the current instance is considered to be less than the null instance, and a negative integer is returned. This comparison is used to determine the order of edges when constructing the minimum spanning tree.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public int CompareTo(MstEdgeCandidate? other)
+        {
+            if (other is null)
+            {
+                return -1;
+            }
+
+            return Weight.CompareTo(other.Weight);
+        }
     }
 }

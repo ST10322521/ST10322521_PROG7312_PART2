@@ -188,83 +188,6 @@ else
             </MudPaper>
         </MudItem>
 
-        @* Display the network nodes in a card layout *@
-        <MudItem xs="12" md="8">
-            <MudPaper Class="pa-4">
-                <MudText Typo="Typo.h5" Class="mb-4">
-                    Network Nodes
-                </MudText>
-
-                <MudGrid>
-                    @foreach (var node in topology.Nodes)
-                    {
-                        <MudItem xs="12" sm="6" lg="4">
-                            <MudCard>
-                                <MudCardContent>
-                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-
-                                        <MudText Typo="Typo.h6">
-                                            @node.Name
-                                        </MudText>
-
-                                        <MudChip T="string" Color="@GetStatusColor(node.Status)" Size="Size.Small">
-                                            @node.Status
-                                        </MudChip>
-                                    </MudStack>
-
-                                    <MudText Typo="Typo.body2" Class="mt-2">
-                                        Type: @node.NodeType
-                                    </MudText>
-
-                                    <MudText Typo="Typo.body2">
-                                        Location: @node.Location
-                                    </MudText>
-
-                                    @if (!string.IsNullOrWhiteSpace(node.MacAddress))
-                                    {
-                                        <MudText Typo="Typo.body2">
-                                            MAC: @node.MacAddress
-                                        </MudText>
-                                    }
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
-                    }
-                </MudGrid>
-            </MudPaper>
-        </MudItem>
-
-        @* Display the gateway node information *@
-        <MudItem xs="12" md="4">
-            <MudPaper Class="pa-4">
-                <MudText Typo="Typo.h5" Class="mb-4">
-                    Gateway
-                </MudText>
-
-                @{
-                    var gateway = topology.Nodes
-                        .FirstOrDefault(n => n.Id == topology.GatewayNodeId);
-                }
-
-                @if (gateway is not null)
-                {
-                    <MudAlert Severity="@GetStatusSeverity(gateway.Status)">
-                        <MudText Typo="Typo.h6">
-                            @gateway.Name
-                        </MudText>
-
-                        <MudText Typo="Typo.body2">
-                            Status: @gateway.Status
-                        </MudText>
-
-                        <MudText Typo="Typo.body2">
-                            Location: @gateway.Location
-                        </MudText>
-                    </MudAlert>
-                }
-            </MudPaper>
-        </MudItem>
-
         @* Display the network connections in a table *@
         <MudItem xs="12">
             <MudPaper Class="pa-4">
@@ -304,6 +227,63 @@ else
                     </RowTemplate>
 
                 </MudTable>
+            </MudPaper>
+        </MudItem>
+
+        @* Display the minimum spanning tree calculated by Prim's algorithm *@
+        <MudItem xs="12">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h5" Class="mb-4">
+                    Minimum Spanning Tree (Prim)
+                </MudText>
+
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Prim's algorithm uses the Min-Heap to select the lowest-cost
+                    available network connection at each step.
+                </MudText>
+
+                @if (MinimumSpanningTreeEdges.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Warning">
+                        No minimum spanning tree could be calculated from the current topology.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="@MinimumSpanningTreeEdges" Hover="true" Dense="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Source</MudTh>
+                            <MudTh>Target</MudTh>
+                            <MudTh>Weight</MudTh>
+                        </HeaderContent>
+
+                        <RowTemplate>
+                            <MudTd DataLabel="Source">
+                                @context.SourceNodeId
+                            </MudTd>
+
+                            <MudTd DataLabel="Target">
+                                @context.TargetNodeId
+                            </MudTd>
+
+                            <MudTd DataLabel="Weight">
+                                @context.Weight
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+
+                    <MudDivider Class="my-4" />
+
+                    <MudStack Row="true" Spacing="4">
+                        <MudText Typo="Typo.body1">
+                            MST edges: <strong>@MinimumSpanningTreeEdges.Count</strong>
+                        </MudText>
+
+                        <MudText Typo="Typo.body1">
+                            Total cost: <strong>@MinimumSpanningTreeCost</strong>
+                        </MudText>
+                    </MudStack>
+                }
             </MudPaper>
         </MudItem>
 

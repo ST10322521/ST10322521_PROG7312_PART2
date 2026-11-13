@@ -128,6 +128,10 @@ public class NetworkTopologyService
             .Select(node => node.Id)
             .ToList();
 
+        // Calculate the minimum spanning tree from the gateway using Prim's algorithm.
+        var minimumSpanningTree = graph.PrimMinimumSpanningTree(gatewayId);
+        topology.MinimumSpanningTreeEdges = minimumSpanningTree.ToList();
+
         // Copy the graph edges into the topology DTO used by the API/UI.
         var exportedEdges = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
