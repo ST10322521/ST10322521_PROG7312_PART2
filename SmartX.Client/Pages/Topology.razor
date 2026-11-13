@@ -95,6 +95,99 @@ else
             </MudPaper>
         </MudItem>
 
+        @* Display BFS traversal and reachability results *@
+        <MudItem xs="12">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h5" Class="mb-4">
+                    BFS Network Traversal
+                </MudText>
+
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    Starting node:
+                    <strong>@topology.GatewayNodeId</strong>
+                </MudText>
+
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Traversal order:
+                </MudText>
+
+                @if (topology.GatewayTraversalOrder.Count > 0)
+                {
+                    <MudText Typo="Typo.body1">
+                        @string.Join(" → ", topology.GatewayTraversalOrder)
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2">
+                        No reachable nodes were found.
+                    </MudText>
+                }
+
+                <MudDivider Class="my-4" />
+
+                <MudText Typo="Typo.body2">
+                    Reachable nodes:
+                    <strong>@topology.ReachableNodeIds.Count</strong>
+                </MudText>
+
+                @if (topology.DisconnectedNodeIds.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Success" Class="mt-3">
+                        All network nodes are reachable from the gateway.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mt-3">
+                        Disconnected nodes:
+                        @string.Join(", ", topology.DisconnectedNodeIds)
+                    </MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+
+        @* Display the route to the gateway *@
+        <MudItem xs="12">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h5" Class="mb-4">
+                    Route to Gateway
+                </MudText>
+
+                <MudSelect T="string" @bind-Value="selectedRouteNodeId" Label="Select sensor" Variant="Variant.Outlined"
+                           Class="mb-3">
+
+                    @foreach (var node in topology.Nodes.Where(n => !n.IsGateway))
+                    {
+                        <MudSelectItem T="string" Value="@node.Id">
+                            @node.Id (@node.Status)
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@routeLoading"
+                           OnClick="FindRouteToGatewayAsync">
+
+                    @(routeLoading ? "Finding Route..." : "Find Route")
+                </MudButton>
+
+                @if (!string.IsNullOrWhiteSpace(routeError))
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mt-4">
+                        @routeError
+                    </MudAlert>
+                }
+
+                @if (selectedRoute.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Success" Class="mt-4">
+                        <strong>Route:</strong>
+                        @string.Join(" → ", selectedRoute)
+                    </MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+
         @* Display the network nodes in a card layout *@
         <MudItem xs="12" md="8">
             <MudPaper Class="pa-4">

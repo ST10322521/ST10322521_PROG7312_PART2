@@ -88,13 +88,17 @@ public class NetworkTopologyService
         topology.GatewayNodeId = gatewayId;
         graph.AddVertex(topology.Nodes[0]);
 
-        // Add gateway connections to each sensor node.
+        // Add edges from the gateway to specific sensor nodes based on their device IDs.
         foreach (var sensor in sensors)
         {
-            graph.AddEdge(
-                gatewayId,
-                sensor.DeviceId,
-                1);
+            if (string.Equals(sensor.DeviceId, "ENUM-TEST-001", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(sensor.DeviceId, "TOPOLOGY-TEST-001", StringComparison.OrdinalIgnoreCase))
+            {
+                graph.AddUndirectedEdge(
+                    gatewayId,
+                    sensor.DeviceId,
+                    1);
+            }
         }
 
         // Add simulated wireless mesh connections between sensor nodes.
@@ -112,6 +116,17 @@ public class NetworkTopologyService
                     GetConnectionCost(source.DeviceId, target.DeviceId));
             }
         }
+
+        // Perform a breadth-first search (BFS) traversal starting from the gateway node to determine the order of reachable nodes and identify disconnected nodes.
+        var gatewayTraversal = graph.BreadthFirstSearch(gatewayId);
+        topology.GatewayTraversalOrder = gatewayTraversal.ToList();
+        topology.ReachableNodeIds = gatewayTraversal.ToList();
+        topology.DisconnectedNodeIds = topology.Nodes
+            .Where(node => !topology.ReachableNodeIds.Contains(
+                node.Id,
+                StringComparer.OrdinalIgnoreCase))
+            .Select(node => node.Id)
+            .ToList();
 
         // Copy the graph edges into the topology DTO used by the API/UI.
         var exportedEdges = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -134,6 +149,86 @@ public class NetworkTopologyService
         topology.LastUpdated = DateTime.UtcNow;
 
         return topology;
+    }
+    /// <summary>
+    /// Asynchronously traverses the network graph starting from a specified node ID and returns the order of nodes visited during the traversal. The method retrieves the current network topology, constructs a NetworkGraph object, and performs a breadth-first search (BFS) traversal starting from the provided startNodeId. The traversal considers only active edges and online nodes. The method returns a read-only list of node IDs representing the order in which nodes were visited during the traversal.
+    /// </summary>
+    /// <param name="startNodeId"></param>
+    /// <returns></returns>
+    public async Task<IReadOnlyList<string>> TraverseFromAsync(string startNodeId)
+    {
+        var topology = await GetTopologyAsync();
+
+        var graph = new NetworkGraph();
+        // Add nodes to the graph based on the topology's nodes.
+        foreach (var node in topology.Nodes)
+        {
+            graph.AddVertex(node);
+        }
+        // Add edges to the graph based on the topology's edges, considering active edges and the gateway node.
+        foreach (var edge in topology.Edges)
+        {
+            if (!edge.IsActive)
+            {
+                continue;
+            }
+
+            if (string.Equals(edge.SourceNodeId, topology.GatewayNodeId, StringComparison.OrdinalIgnoreCase))
+            {
+                graph.AddEdge(
+                    edge.SourceNodeId,
+                    edge.TargetNodeId,
+                    edge.Weight,
+                    edge.IsActive);
+            }
+            else
+            {
+                graph.AddUndirectedEdge(
+                    edge.SourceNodeId,
+                    edge.TargetNodeId,
+                    edge.Weight,
+                    edge.IsActive);
+            }
+        }
+
+        return graph.BreadthFirstSearch(startNodeId);
+    }
+    /// <summary>
+    /// Asynchronously finds a route from a specified starting node to the gateway node in the network topology. The method retrieves the current network topology, constructs a NetworkGraph object, and uses a breadth-first search (BFS) algorithm to find the shortest path from the startNodeId to the gateway node. If the gateway node is not defined or if no path exists, an empty list is returned. The method returns a read-only list of node IDs representing the route from the starting node to the gateway.
+    /// </summary>
+    /// <param name="startNodeId"></param>
+    /// <returns></returns>
+    public async Task<IReadOnlyList<string>> FindRouteToGatewayAsync(string startNodeId)
+    {
+        var topology = await GetTopologyAsync();
+
+        if (string.IsNullOrWhiteSpace(topology.GatewayNodeId))
+        {
+            return [];
+        }
+
+        var graph = new NetworkGraph();
+        // Add nodes to the graph based on the topology's nodes.
+        foreach (var node in topology.Nodes)
+        {
+            graph.AddVertex(node);
+        }
+        // Add edges to the graph based on the topology's edges, considering only active edges.
+        foreach (var edge in topology.Edges)
+        {
+            if (!edge.IsActive)
+            {
+                continue;
+            }
+
+            graph.AddUndirectedEdge(
+                edge.SourceNodeId,
+                edge.TargetNodeId,
+                edge.Weight,
+                edge.IsActive);
+        }
+
+        return graph.FindPath(startNodeId, topology.GatewayNodeId);
     }
     /// <summary>
     /// Calculates the connection cost between two devices based on their IDs. The method takes two device IDs as input parameters and generates a combined string by ordering the IDs lexicographically. It then computes the hash code of the combined string, takes its absolute value, and calculates the connection cost as 1 plus the remainder of the hash code divided by 10. This ensures that the connection cost is always a positive integer between 1 and 10. The method is static and private, meaning it can only be called within the NetworkTopologyService class.

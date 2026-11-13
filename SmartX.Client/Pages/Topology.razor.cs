@@ -25,6 +25,10 @@ public partial class Topology
     private bool loading = true;
     private string? errorMessage;
     private BlazorDiagram Diagram { get; set; } = null!;
+    private string? selectedRouteNodeId;
+    private List<string> selectedRoute = [];
+    private string? routeError;
+    private bool routeLoading;
     /// <summary>
     /// Gets the JSON serializer options used for deserializing the network topology data from the API. The options are configured to be case-insensitive and include a converter for handling enum values as strings.
     /// </summary>
@@ -183,5 +187,45 @@ public partial class Topology
             "warning" => Severity.Warning,
             _ => Severity.Info
         };
+    }
+    /// <summary>
+    /// Asynchronously finds a route from the selected sensor node to the gateway node in the network topology. The method checks if a sensor node has been selected and then makes an HTTP GET request to the API endpoint for finding the route. If the request is successful, it deserializes the response into a list of node IDs representing the route. If no route is found or if an error occurs, an appropriate error message is set for display. The method also manages the loading state during the operation.
+    /// </summary>
+    /// <returns></returns>
+    private async Task FindRouteToGatewayAsync()
+    {
+        selectedRoute = [];
+        routeError = null;
+
+        if (string.IsNullOrWhiteSpace(selectedRouteNodeId))
+        {
+            routeError = "Select a sensor first.";
+            return;
+        }
+
+        routeLoading = true;
+        // Make an HTTP GET request to the API endpoint for finding the route from the selected node to the gateway
+        try
+        {
+            var response = await Http.GetAsync(
+                $"api/NetworkTopology/route/{Uri.EscapeDataString(selectedRouteNodeId)}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                routeError = $"No route from '{selectedRouteNodeId}' to the gateway was found.";
+                return;
+            }
+
+            selectedRoute =
+                await response.Content.ReadFromJsonAsync<List<string>>() ?? [];
+        }
+        catch (Exception ex)
+        {
+            routeError = $"Unable to find route: {ex.Message}";
+        }
+        finally
+        {
+            routeLoading = false;
+        }
     }
 }

@@ -9,7 +9,7 @@
 <MudText Typo="Typo.h4" Class="mb-4">Sensor Management</MudText>
 
 <MudPaper Class="pa-4">
-
+    @* Header section with title and "Add Sensor" button *@
     <div class="d-flex justify-space-between align-center mb-4">
         <MudText Typo="Typo.h6"> Sensors (@filteredSensors.Count()) </MudText>
 
@@ -19,6 +19,7 @@
         </MudButton>
     </div>
 
+    @* Search and filter section *@
     <div class="d-flex flex-wrap gap-3 mb-4">
 
         <MudTextField @bind-Value="searchText" Label="Search devices" Placeholder="Device ID, MAC or location"
@@ -36,13 +37,33 @@
             }
 
         </MudSelect>
-
+    
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search"
                    OnClick="RecordSearch">
             Search
         </MudButton>
 
     </div>
+    @* Sensor table section *@
+    @if (!string.IsNullOrWhiteSpace(searchMessage))
+    {
+        @* Display search result message with appropriate severity *@
+        <MudAlert Severity="@(identifiedSensor is null ? Severity.Warning : Severity.Success)" Class="mb-4">
+            @searchMessage
+        </MudAlert>
+    }
+
+    @if (identifiedSensor is not null)
+    {
+        @* Display the identified sensor details *@
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudText Typo="Typo.h6">Selected Sensor</MudText>
+            <MudText>Device ID: <strong>@identifiedSensor.DeviceId</strong></MudText>
+            <MudText>MAC Address: <strong>@identifiedSensor.MacAddress</strong></MudText>
+            <MudText>Status: <strong>Identified</strong></MudText>
+            <MudText>Location: @identifiedSensor.Location</MudText>
+        </MudPaper>
+    }
 
     @if (loading)
     {
@@ -54,6 +75,7 @@
     }
     else
     {
+        @* Display the sensor table with filtered sensors *@
         <MudTable Items="filteredSensors" Hover="true" Dense="true" Striped="true">
 
             <HeaderContent>

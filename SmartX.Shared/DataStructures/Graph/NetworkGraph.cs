@@ -153,6 +153,126 @@ public class NetworkGraph
         return edges.AsReadOnly();
     }
     /// <summary>
+    /// Performs a breadth-first search (BFS) traversal of the graph starting from the specified node ID. The method returns a list of node IDs in the order they were visited during the traversal. If the starting node does not exist or is offline, an empty list is returned. The BFS algorithm uses a queue to explore nodes level by level and keeps track of visited nodes to avoid cycles.
+    /// </summary>
+    /// <param name="startNodeId"></param>
+    /// <returns></returns>
+    public IReadOnlyList<string> BreadthFirstSearch(string startNodeId)
+    {
+        if (!ContainsVertex(startNodeId))
+        {
+            return [];
+        }
+
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var traversalOrder = new List<string>();
+        var queue = new Queue<string>();
+
+        if (!IsNodeOnline(startNodeId))
+        {
+            return [];
+        }
+
+        queue.Enqueue(startNodeId);
+        visited.Add(startNodeId);
+        // Perform BFS traversal
+        while (queue.Count > 0)
+        {
+            var currentNode = queue.Dequeue();
+            traversalOrder.Add(currentNode);
+
+            foreach (var edge in GetNeighbours(currentNode))
+            {
+                if (!edge.IsActive ||
+                    !IsNodeOnline(edge.TargetNodeId) ||
+                    !visited.Add(edge.TargetNodeId))
+                {
+                    continue;
+                }
+
+                queue.Enqueue(edge.TargetNodeId);
+            }
+        }
+
+        return traversalOrder;
+    }
+    /// <summary>
+    /// Finds a path from the start node to the target node using breadth-first search (BFS). The method returns a list of node IDs representing the path from the start node to the target node. If either the start or target node does not exist, is offline, or if no path exists between them, an empty list is returned. The BFS algorithm explores nodes level by level and keeps track of visited nodes and their predecessors to reconstruct the path once the target node is reached.
+    /// </summary>
+    /// <param name="startNodeId"></param>
+    /// <param name="targetNodeId"></param>
+    /// <returns></returns>
+    public IReadOnlyList<string> FindPath(string startNodeId, string targetNodeId)
+    {
+        if (!ContainsVertex(startNodeId) ||
+            !ContainsVertex(targetNodeId) ||
+            !IsNodeOnline(startNodeId) ||
+            !IsNodeOnline(targetNodeId))
+        {
+            return [];
+        }
+
+        var queue = new Queue<string>();
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var previous = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase);
+
+        queue.Enqueue(startNodeId);
+        visited.Add(startNodeId);
+        // Perform BFS to find the target node
+        while (queue.Count > 0)
+        {
+            var currentNode = queue.Dequeue();
+
+            if (string.Equals(
+                currentNode,
+                targetNodeId,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+            // Explore neighbors of the current node
+            foreach (var edge in GetNeighbours(currentNode))
+            {
+                if (!edge.IsActive ||
+                    !IsNodeOnline(edge.TargetNodeId) ||
+                    !visited.Add(edge.TargetNodeId))
+                {
+                    continue;
+                }
+
+                previous[edge.TargetNodeId] = currentNode;
+                queue.Enqueue(edge.TargetNodeId);
+            }
+        }
+
+        if (!visited.Contains(targetNodeId))
+        {
+            return [];
+        }
+
+        var path = new List<string>();
+        var current = targetNodeId;
+        // Reconstruct the path from target to start using the previous dictionary
+        while (true)
+        {
+            path.Add(current);
+
+            if (string.Equals(
+                current,
+                startNodeId,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+
+            current = previous[current];
+        }
+
+        path.Reverse();
+        return path;
+    }
+    /// <summary>
     /// Determines whether the graph is connected, meaning there is a path between any two vertices. The method performs a breadth-first search (BFS) starting from an arbitrary vertex and keeps track of visited vertices. If all vertices are visited during the traversal, the graph is considered connected. The method returns true if the graph is connected; otherwise, it returns false.
     /// </summary>
     /// <returns></returns>

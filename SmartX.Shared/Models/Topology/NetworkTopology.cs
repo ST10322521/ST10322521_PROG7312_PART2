@@ -8,5 +8,11 @@ public class NetworkTopology
 
     public string? GatewayNodeId { get; set; }
 
+    public List<string> GatewayTraversalOrder { get; set; } = [];
+
+    public List<string> ReachableNodeIds { get; set; } = [];
+
+    public List<string> DisconnectedNodeIds { get; set; } = [];
+
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 }

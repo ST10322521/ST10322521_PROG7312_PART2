@@ -40,6 +40,8 @@ public partial class Sensors
 
     private bool showAttachments;
     private Sensor? selectedSensor;
+    private Sensor? identifiedSensor;
+    private string? searchMessage;
     private List<SensorAttachment> attachments = new();
 
     private bool uploading;
@@ -302,31 +304,47 @@ public partial class Sensors
             NormalMax = 28
         };
     }
+    /// <summary>
+    /// Asynchronously records a search action performed by the user. The method checks if the search text or selected category is provided; if not, it sets a message prompting the user to enter a sensor ID or MAC address. It then attempts to identify a matching sensor from the list based on the search criteria. If a sensor is found, it sets a success message; otherwise, it sets a message indicating no match was found. Finally, it sends a POST request to the "api/recommendations/interactions" endpoint to log the search action, including details such as the action type, query, device ID (if found), and timestamp. Any exceptions during this process are logged to the console.
+    /// </summary>
+    /// <returns></returns>
     private async Task RecordSearch()
     {
+        identifiedSensor = null;
+        searchMessage = null;
+
         if (string.IsNullOrWhiteSpace(searchText) && !selectedCategory.HasValue)
         {
+            searchMessage = "Enter a sensor ID or MAC address to search.";
             return;
         }
+        // Identify the sensor based on search criteria
+        identifiedSensor = sensors
+            .Where(s =>
+                (string.IsNullOrWhiteSpace(searchText) ||
+                 s.DeviceId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                 s.MacAddress.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                 s.Location.Contains(searchText, StringComparison.OrdinalIgnoreCase)) &&
+                (!selectedCategory.HasValue ||
+                 s.Category == selectedCategory.Value))
+            .FirstOrDefault();
 
-        var deviceId = sensors
-        .Where(s =>
-            (string.IsNullOrWhiteSpace(searchText) ||
-             s.DeviceId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-             s.MacAddress.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-             s.Location.Contains(searchText, StringComparison.OrdinalIgnoreCase)) &&
-            (!selectedCategory.HasValue ||
-             s.Category == selectedCategory.Value))
-        .Select(s => s.DeviceId)
-        .FirstOrDefault();
-
+        if (identifiedSensor is null)
+        {
+            searchMessage = "No matching sensor was found.";
+        }
+        else
+        {
+            searchMessage = $"Sensor found: {identifiedSensor.DeviceId}";
+        }
+        // Record the search action for recommendations
         try
         {
             await Http.PostAsJsonAsync("api/recommendations/interactions", new
             {
                 action = "Search",
                 query = searchText,
-                deviceId,
+                deviceId = identifiedSensor?.DeviceId,
                 command = (string?)null,
                 timestamp = DateTime.UtcNow
             });
